@@ -1,0 +1,83 @@
+"""
+SQLAlchemy ORM Models for NeuroAdapt Platform (SIH260206).
+Matches Section 17 Database Schema requirements.
+"""
+
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON
+from sqlalchemy.orm import relationship
+
+from .database import Base
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(120), nullable=False)
+    email = Column(String(120), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(30), nullable=False)  # "child", "clinician", "admin"
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Child(Base):
+    __tablename__ = "children"
+
+    id = Column(Integer, primary_key=True, index=True)
+    caregiver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    clinician_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    name = Column(String(120), nullable=False)
+    age = Column(Integer, nullable=False, default=8)
+    profile_data = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Exercise(Base):
+    __tablename__ = "exercises"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    domain = Column(String(50), nullable=False)  # "attention", "memory", "reasoning", "problem_solving"
+    difficulty = Column(Integer, default=1)
+    configuration = Column(JSON, nullable=True)
+
+class TherapyPlan(Base):
+    __tablename__ = "therapy_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
+    clinician_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    target_domains = Column(JSON, nullable=False)  # list of target domains
+    min_difficulty = Column(Integer, default=1)
+    max_difficulty = Column(Integer, default=10)
+    schedule_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class SessionRecord(Base):
+    __tablename__ = "sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+class Performance(Base):
+    __tablename__ = "performance"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False)
+    score = Column(Integer, default=0)
+    accuracy = Column(Float, default=0.0)
+    response_time = Column(Float, default=0.0)  # ms
+    errors = Column(Integer, default=0)
+    difficulty = Column(Integer, default=1)
+
+class Recommendation(Base):
+    __tablename__ = "recommendations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=True)
+    recommended_difficulty = Column(Integer, nullable=False)
+    recommended_exercise = Column(String(100), nullable=False)
+    model_version = Column(String(50), default="ScratchDecisionTree_v1")
+    created_at = Column(DateTime, default=datetime.utcnow)

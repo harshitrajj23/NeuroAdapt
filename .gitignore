@@ -1,0 +1,75 @@
+# ==========================================
+# Root .gitignore for NeuroAdapt Monorepo
+# ==========================================
+
+# Environment variables & secrets (CRITICAL)
+.env
+.env.*
+!.env.example
+*.env
+*.env.*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Node.js & Next.js dependencies and builds
+node_modules/
+/frontend/node_modules/
+.next/
+/frontend/.next/
+out/
+/frontend/out/
+build/
+/frontend/build/
+dist/
+/frontend/dist/
+.pnp
+.pnp.js
+coverage/
+/frontend/coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Python virtual environment & cache
+__pycache__/
+*/__pycache__/
+*/**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# SQLite & local database files
+*.db
+*.sqlite
+*.sqlite3
+backend/*.db
+
+# Logs & debugging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
