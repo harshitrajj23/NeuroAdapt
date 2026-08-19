@@ -205,69 +205,70 @@ function AuthContent() {
 
     try {
       if (mode === "register") {
-        try {
-          const res = await fetch(`${backendUrl}/api/auth/signup`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: name.trim() || email.split("@")[0],
-              email: email.trim(),
-              password: password,
-              role: role,
-            }),
-          });
-
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({ detail: "Registration failed." }));
-            throw new Error(data.detail || "Registration failed.");
-          }
-        } catch (fetchErr: any) {
-          // If backend API (port 8000) is offline/unreachable, fallback for frontend dev demo
-          if (fetchErr.message?.includes("Failed to fetch") || fetchErr.name === "TypeError") {
-            console.warn("Backend API offline (port 8000). Authenticating in local demo mode.");
-          } else {
-            throw fetchErr;
-          }
-        }
-      } else {
-        try {
-          const res = await fetch(`${backendUrl}/api/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: email.trim(),
-              password: password,
-              role: role,
-            }),
-          });
-
-          const resData = res.ok ? await res.json().catch(() => null) : null;
-          const userObj = {
-            id: resData?.user?.id || resData?.id || 1,
-            name: name.trim() || resData?.user?.name || resData?.name || email.split("@")[0],
-            email: email.trim(),
-            role: role,
-          };
-          localStorage.setItem("neuroadapt_user", JSON.stringify(userObj));
-        } catch (fetchErr: any) {
-          console.warn("Backend fetch fallback for frontend demo.", fetchErr);
-          const fallbackUser = {
-            id: 1,
+        const res = await fetch(`${backendUrl}/api/auth/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             name: name.trim() || email.split("@")[0],
             email: email.trim(),
+            password: password,
             role: role,
-          };
-          localStorage.setItem("neuroadapt_user", JSON.stringify(fallbackUser));
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({ detail: "Registration failed." }));
+          throw new Error(errData.detail || "Registration failed. Please check your details.");
         }
-      }
 
-      setIsLoading(false);
+        const newUser = await res.json();
+        const userObj = {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+        };
 
-      // Redirect to role portal
-      if (role === "child") {
-        router.push("/child");
+        localStorage.setItem("neuroadapt_user", JSON.stringify(userObj));
+        setIsLoading(false);
+
+        if (userObj.role === "child") {
+          router.push("/child");
+        } else if (userObj.role === "clinician") {
+          router.push("/clinician");
+        } else {
+          router.push("/");
+        }
       } else {
-        router.push("/");
+        const res = await fetch(`${backendUrl}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email.trim(),
+            password: password,
+            role: role,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({ detail: "Login failed." }));
+          throw new Error(errData.detail || "Invalid email or password.");
+        }
+
+        const data = await res.json();
+        const userObj = data.user;
+
+        localStorage.setItem("neuroadapt_user", JSON.stringify(userObj));
+        setIsLoading(false);
+
+        // Redirect to role portal
+        if (userObj.role === "child") {
+          router.push("/child");
+        } else if (userObj.role === "clinician") {
+          router.push("/clinician");
+        } else {
+          router.push("/");
+        }
       }
     } catch (err: any) {
       setIsLoading(false);

@@ -52,3 +52,38 @@ class ClinicianAISummaryRequest(BaseModel):
     recent_reaction_time_ms: float
     domain_breakdown: Dict[str, float]
     struggling_domains: List[str]
+
+class ChildCreateRequest(BaseModel):
+    name: str
+    age: int = 8
+    clinician_id: Optional[int] = None
+    caregiver_id: Optional[int] = None
+    condition: Optional[str] = "Developmental Cognitive Support"
+    baseline_score: Optional[int] = 70
+
+class TherapyPlanCreateRequest(BaseModel):
+    child_id: int
+    clinician_id: Optional[int] = None
+    target_domains: List[str] = ["attention", "memory", "reasoning"]
+    min_difficulty: int = 1
+    max_difficulty: int = 10
+    schedule_notes: Optional[str] = "3 sessions per week, 15 minutes each"
+
+class AssignmentCreateRequest(BaseModel):
+    child_id: int
+    clinician_id: Optional[int] = None
+    exercise_id: int
+    difficulty: int = 1
+    notes: Optional[str] = None
+
+class SessionCompletionPayload(BaseModel):
+    child_id: int
+    exercise_id: int
+    difficulty: int = 1
+    score: int = 0
+    accuracy: float = 0.0
+    response_time_ms: float = 0.0
+    errors: int = 0
+    assignment_id: Optional[int] = None
+
+

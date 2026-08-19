@@ -81,3 +81,18 @@ class Recommendation(Base):
     recommended_exercise = Column(String(100), nullable=False)
     model_version = Column(String(50), default="ScratchDecisionTree_v1")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class Assignment(Base):
+    __tablename__ = "assignments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
+    clinician_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
+    difficulty = Column(Integer, default=1)
+    status = Column(String(30), default="pending")  # "pending", "completed"
+    notes = Column(Text, nullable=True)
+    assigned_date = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=True)
+
