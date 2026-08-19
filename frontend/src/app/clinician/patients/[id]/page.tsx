@@ -22,6 +22,8 @@ import {
   Edit3,
   Plus,
   ClipboardList,
+  Download,
+  FileText,
 } from "lucide-react";
 import { useClinicianContext } from "../../layout";
 
@@ -346,6 +348,27 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
           <button onClick={() => setIsPlanModalOpen(true)} className="cl-table-action-btn" style={{ padding: "8px 16px" }}>
             <Edit3 className="h-4 w-4" /> Therapy Plan
           </button>
+          <a
+            href={`${apiUrl}/api/clinician/reports/${childId}/pdf?clinician_id=${user?.id || ""}`}
+            download={`NeuroAdapt_Clinical_Report_${child.name.replace(/\s+/g, "_")}.pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="cl-table-action-btn"
+            style={{
+              padding: "8px 16px",
+              background: "#F5F3FF",
+              borderColor: "#7C3AED",
+              color: "#6D28D9",
+              fontWeight: 700,
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+            title="Download official clinical telemetry and progress PDF report"
+          >
+            <Download className="h-4 w-4" /> Download PDF Report
+          </a>
         </div>
       </div>
 

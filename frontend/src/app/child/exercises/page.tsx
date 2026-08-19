@@ -11,6 +11,7 @@ import {
   Search,
   Filter,
   Clock,
+  Mic,
 } from "lucide-react";
 import { useChildContext } from "../layout";
 import InteractiveExerciseGame, { ExercisePlayConfig } from "../components/InteractiveExerciseGame";
@@ -33,27 +34,44 @@ interface ExerciseData {
 export default function ExercisesPage() {
   const { user, apiUrl } = useChildContext();
   const [exercises, setExercises] = useState<ExerciseData[]>([]);
+  const [domainLevels, setDomainLevels] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeGameConfig, setActiveGameConfig] = useState<ExercisePlayConfig | null>(null);
 
-  useEffect(() => {
-    const fetchExercises = async () => {
-      try {
-        const res = await fetch(`${apiUrl}/api/exercises`);
-        if (res.ok) {
-          const data = await res.json();
-          setExercises(Array.isArray(data) ? data : []);
-        }
-      } catch {
-        setExercises([]);
-      } finally {
-        setLoading(false);
+  const fetchExercisesAndStats = async () => {
+    try {
+      const [exRes, dashRes] = await Promise.all([
+        fetch(`${apiUrl}/api/exercises`),
+        user?.id ? fetch(`${apiUrl}/api/child/dashboard/${user.id}`) : Promise.resolve(null),
+      ]);
+
+      if (exRes.ok) {
+        const data = await exRes.json();
+        setExercises(Array.isArray(data) ? data : []);
       }
-    };
-    fetchExercises();
-  }, [apiUrl]);
+
+      if (dashRes && dashRes.ok) {
+        const dashData = await dashRes.json();
+        if (dashData.domain_stats) {
+          const lvls: Record<string, number> = {};
+          dashData.domain_stats.forEach((d: any) => {
+            lvls[d.domain] = d.level || 1;
+          });
+          setDomainLevels(lvls);
+        }
+      }
+    } catch {
+      setExercises([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExercisesAndStats();
+  }, [apiUrl, user?.id]);
 
   const difficultyLabel = (d: number) => (d <= 2 ? "Easy" : d <= 5 ? "Medium" : "Hard");
   const difficultyColor = (d: string) => {
@@ -69,11 +87,12 @@ export default function ExercisesPage() {
   });
 
   const handleStartGame = (ex: ExerciseData) => {
+    const currentLevel = domainLevels[ex.domain] || ex.difficulty || 1;
     setActiveGameConfig({
       exerciseId: ex.id,
       exerciseName: ex.name,
       domain: ex.domain,
-      difficulty: ex.difficulty || 1,
+      difficulty: currentLevel,
     });
   };
 
@@ -135,7 +154,8 @@ export default function ExercisesPage() {
         <div className="cd-exercises-page-grid">
           {filtered.map((ex, i) => {
             const domConf = DOMAIN_CONFIG[ex.domain] || DOMAIN_CONFIG.attention;
-            const dl = difficultyLabel(ex.difficulty);
+            const liveDiff = domainLevels[ex.domain] || ex.difficulty || 1;
+            const dl = difficultyLabel(liveDiff);
             const dc = difficultyColor(dl);
             return (
               <div key={ex.id} className="cd-exercise-page-card" style={{ animationDelay: `${i * 80}ms` }}>
@@ -149,11 +169,16 @@ export default function ExercisesPage() {
                   <span style={{ background: dc.bg, color: dc.text }} className="cd-exercise-diff-tag">
                     {dl}
                   </span>
+                  {ex.name.toLowerCase().includes("voice") && (
+                    <span style={{ background: "#EDE9FE", color: "#6D28D9", display: "inline-flex", alignItems: "center", gap: "3px" }} className="cd-exercise-diff-tag">
+                      <Mic className="h-3 w-3" /> Voice AI
+                    </span>
+                  )}
                 </div>
                 <h3 className="cd-exercise-page-title">{ex.name}</h3>
                 <div className="cd-exercise-page-meta">
                   <span>
-                    <Zap className="h-3.5 w-3.5" /> Level {ex.difficulty}/10
+                    <Zap className="h-3.5 w-3.5" /> Level {liveDiff}/10
                   </span>
                 </div>
                 <button
@@ -176,7 +201,9 @@ export default function ExercisesPage() {
           childId={user?.id || 1}
           apiUrl={apiUrl}
           onClose={() => setActiveGameConfig(null)}
-          onComplete={() => {}}
+          onComplete={() => {
+            fetchExercisesAndStats();
+          }}
         />
       )}
 

@@ -4,7 +4,7 @@ Matches Section 17 Database Schema requirements.
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Boolean
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -95,4 +95,17 @@ class Assignment(Base):
     assigned_date = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     session_id = Column(Integer, ForeignKey("sessions.id"), nullable=True)
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(150), nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String(50), default="assignment")  # "assignment", "session_complete", "alert"
+    link = Column(String(200), nullable=True)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 

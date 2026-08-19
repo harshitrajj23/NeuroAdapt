@@ -18,12 +18,10 @@ import { useChildContext } from "../layout";
 import { useRouter } from "next/navigation";
 
 export default function SettingsPage() {
-  const { user } = useChildContext();
+  const { user, theme, setTheme, fontSize, setFontSize } = useChildContext();
   const router = useRouter();
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [fontSize, setFontSize] = useState<"normal" | "large" | "xlarge">("normal");
 
   const handleLogout = () => {
     localStorage.removeItem("neuroadapt_user");
@@ -50,7 +48,14 @@ export default function SettingsPage() {
             <div className="cd-settings-profile-info">
               <span className="cd-settings-profile-name">{user?.name || "User"}</span>
               <span className="cd-settings-profile-email">{user?.email || ""}</span>
-              <span className="cd-settings-profile-role">Role: {user?.role || "child"}</span>
+              <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                <span className="cd-settings-profile-role">Role: {user?.role || "child"}</span>
+                {user?.age && (
+                  <span className="cd-settings-profile-role" style={{ background: "#EDE9FE", color: "#6D28D9" }}>
+                    Age: {user.age} yrs
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -2172,3 +2172,404 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/*                 ACCESSIBILITY: FONT SIZE SCALING                      */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+.cd-font-large {
+  font-size: 112%;
+}
+.cd-font-large .cd-hero-title,
+.cd-font-large .cd-page-heading {
+  font-size: 32px !important;
+}
+.cd-font-large .cd-section-title,
+.cd-font-large .cd-exercise-title,
+.cd-font-large .cd-card-title {
+  font-size: 20px !important;
+}
+.cd-font-large .cd-hero-desc,
+.cd-font-large .cd-page-desc,
+.cd-font-large .cd-exercise-desc,
+.cd-font-large .cd-card-desc,
+.cd-font-large .cd-stat-label {
+  font-size: 16px !important;
+}
+.cd-font-large .cd-stat-val,
+.cd-font-large .cd-stat-value {
+  font-size: 30px !important;
+}
+.cd-font-large .cd-sidebar-nav-label {
+  font-size: 16px !important;
+}
+.cd-font-large .cd-btn,
+.cd-font-large button {
+  font-size: 16px !important;
+}
+
+.cd-font-xlarge {
+  font-size: 125%;
+}
+.cd-font-xlarge .cd-hero-title,
+.cd-font-xlarge .cd-page-heading {
+  font-size: 36px !important;
+}
+.cd-font-xlarge .cd-section-title,
+.cd-font-xlarge .cd-exercise-title,
+.cd-font-xlarge .cd-card-title {
+  font-size: 23px !important;
+}
+.cd-font-xlarge .cd-hero-desc,
+.cd-font-xlarge .cd-page-desc,
+.cd-font-xlarge .cd-exercise-desc,
+.cd-font-xlarge .cd-card-desc,
+.cd-font-xlarge .cd-stat-label {
+  font-size: 18px !important;
+}
+.cd-font-xlarge .cd-stat-val,
+.cd-font-xlarge .cd-stat-value {
+  font-size: 34px !important;
+}
+.cd-font-xlarge .cd-sidebar-nav-label {
+  font-size: 18px !important;
+}
+.cd-font-xlarge .cd-btn,
+.cd-font-xlarge button {
+  font-size: 18px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/*                 ACCESSIBILITY: DARK THEME PALETTE                     */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+.cd-theme-dark,
+[data-theme="dark"] .cd-layout,
+.cd-layout.cd-theme-dark {
+  background: #0E0C1B !important;
+  color: #E8E5F7 !important;
+}
+
+/* Sidebar & Topbar */
+.cd-theme-dark .cd-sidebar {
+  background: #151226 !important;
+  border-right-color: #262042 !important;
+}
+.cd-theme-dark .cd-sidebar-logo-text {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-sidebar-logo-icon {
+  background: #251D44 !important;
+  border-color: #3C3066 !important;
+}
+.cd-theme-dark .cd-sidebar-nav-item {
+  color: #A9A3C7 !important;
+}
+.cd-theme-dark .cd-sidebar-nav-item:hover {
+  background: #211B3B !important;
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-sidebar-nav-item--active {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.25) 0%, rgba(139, 92, 246, 0.15) 100%) !important;
+  color: #C4B5FD !important;
+}
+.cd-theme-dark .cd-sidebar-user {
+  background: #1D1836 !important;
+  border: 1px solid #2D2552 !important;
+}
+.cd-theme-dark .cd-sidebar-user-name {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-sidebar-user-role {
+  color: #A78BFA !important;
+}
+.cd-theme-dark .cd-sidebar-logout {
+  color: #F87171 !important;
+}
+.cd-theme-dark .cd-sidebar-logout:hover {
+  background: rgba(239, 68, 68, 0.12) !important;
+}
+.cd-theme-dark .cd-sidebar-separator {
+  background: #262042 !important;
+}
+
+.cd-theme-dark .cd-topbar {
+  background: rgba(21, 18, 38, 0.85) !important;
+  border-bottom-color: #262042 !important;
+}
+.cd-theme-dark .cd-topbar-title {
+  color: #FFFFFF !important;
+}
+
+/* Headings & Texts */
+.cd-theme-dark .cd-page-heading,
+.cd-theme-dark .cd-section-title,
+.cd-theme-dark .cd-card-title,
+.cd-theme-dark .cd-exercise-title,
+.cd-theme-dark .cd-settings-section-title,
+.cd-theme-dark .cd-settings-row-title,
+.cd-theme-dark .cd-settings-profile-name,
+.cd-theme-dark .cd-achievement-name {
+  color: #FFFFFF !important;
+}
+
+.cd-theme-dark .cd-page-desc,
+.cd-theme-dark .cd-section-desc,
+.cd-theme-dark .cd-card-desc,
+.cd-theme-dark .cd-exercise-desc,
+.cd-theme-dark .cd-settings-row-desc,
+.cd-theme-dark .cd-settings-profile-email,
+.cd-theme-dark .cd-achievement-desc,
+.cd-theme-dark .cd-stat-label {
+  color: #9D97BF !important;
+}
+
+/* Cards & Surfaces */
+.cd-theme-dark .cd-stat-card,
+.cd-theme-dark .cd-exercise-card,
+.cd-theme-dark .cd-progress-domain-card,
+.cd-theme-dark .cd-achievement-card,
+.cd-theme-dark .cd-settings-card,
+.cd-theme-dark .cd-recent-card,
+.cd-theme-dark .cd-card {
+  background: #18142C !important;
+  border: 1px solid #2B234D !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.cd-theme-dark .cd-stat-card:hover,
+.cd-theme-dark .cd-exercise-card:hover,
+.cd-theme-dark .cd-achievement-card:hover {
+  border-color: #7C3AED !important;
+  box-shadow: 0 8px 30px rgba(124, 58, 237, 0.2) !important;
+}
+
+.cd-theme-dark .cd-stat-val,
+.cd-theme-dark .cd-stat-value,
+.cd-theme-dark .cd-progress-domain-val {
+  color: #FFFFFF !important;
+}
+
+/* Hero Section */
+.cd-theme-dark .cd-hero-card {
+  background: linear-gradient(135deg, #2D1A54 0%, #1A1238 100%) !important;
+  border: 1px solid #4C2D8A !important;
+}
+.cd-theme-dark .cd-hero-title {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-hero-desc {
+  color: #D1C4E9 !important;
+}
+
+/* Prescribed Exercise Banner */
+.cd-theme-dark .cd-prescribed-banner {
+  background: linear-gradient(135deg, #3B185F 0%, #1C1236 100%) !important;
+  border-color: #6D28D9 !important;
+}
+
+/* Filter Tabs & Search Inputs */
+.cd-theme-dark .cd-filter-tab {
+  background: #1C1734 !important;
+  border-color: #2D2552 !important;
+  color: #A9A3C7 !important;
+}
+.cd-theme-dark .cd-filter-tab:hover {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-filter-tab--active {
+  background: #7C3AED !important;
+  border-color: #7C3AED !important;
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-search-input {
+  background: #1C1734 !important;
+  border-color: #2D2552 !important;
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-search-input::placeholder {
+  color: #766E99 !important;
+}
+
+/* Settings Controls */
+.cd-theme-dark .cd-settings-toggle-group {
+  background: #120F24 !important;
+  border: 1px solid #2B234D !important;
+}
+.cd-theme-dark .cd-settings-toggle-opt {
+  color: #9D97BF !important;
+}
+.cd-theme-dark .cd-settings-toggle-opt--active {
+  background: #7C3AED !important;
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-settings-divider {
+  background: #282148 !important;
+}
+.cd-theme-dark .cd-settings-switch {
+  background: #2B234D !important;
+}
+.cd-theme-dark .cd-settings-switch--on {
+  background: #7C3AED !important;
+}
+.cd-theme-dark .cd-settings-profile-role {
+  background: #291F4D !important;
+  color: #C4B5FD !important;
+}
+.cd-theme-dark .cd-settings-row:hover {
+  background: rgba(124, 58, 237, 0.05) !important;
+}
+
+/* Modal Dialogs */
+.cd-theme-dark .cd-modal-card {
+  background: #18142C !important;
+  border: 1px solid #382D63 !important;
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-modal-header {
+  border-bottom-color: #282148 !important;
+}
+.cd-theme-dark .cd-modal-close-btn {
+  background: #251D44 !important;
+  color: #C4B5FD !important;
+}
+
+/* Interactive Game Overlay in Dark Mode */
+.cd-theme-dark .cd-game-container {
+  background: #131024 !important;
+}
+.cd-theme-dark .cd-game-card {
+  background: #1E1838 !important;
+  border-color: #382D63 !important;
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-game-card:hover {
+  border-color: #8B5CF6 !important;
+  background: #28204B !important;
+}
+.cd-theme-dark .cd-modal-card h2,
+.cd-theme-dark .cd-modal-card h3,
+.cd-theme-dark .cd-modal-card h4 {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-modal-card p {
+  color: #C4C0DC !important;
+}
+
+/* Dashboard Specific Dark Overrides */
+.cd-theme-dark .cd-quick-stat-card {
+  background: #18142C !important;
+  border-color: #2B234D !important;
+}
+.cd-theme-dark .cd-quick-stat-value {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-quick-stat-label {
+  color: #9D97BF !important;
+}
+
+.cd-theme-dark .cd-domain-card {
+  background: #18142C !important;
+  border-color: #2B234D !important;
+}
+.cd-theme-dark .cd-domain-card-title {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-domain-stat-val {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-domain-stat-label {
+  color: #9D97BF !important;
+}
+.cd-theme-dark .cd-view-all-btn {
+  background: #1C1734 !important;
+  border-color: #2D2552 !important;
+  color: #C4B5FD !important;
+}
+.cd-theme-dark .cd-view-all-btn:hover {
+  background: #251D44 !important;
+}
+
+.cd-theme-dark .cd-recent-session-card {
+  background: #18142C !important;
+  border-color: #2B234D !important;
+}
+.cd-theme-dark .cd-recent-session-title {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-recent-session-meta {
+  color: #9D97BF !important;
+}
+
+/* Domain Card Ring & Stats in Dark Mode */
+.cd-theme-dark .cd-domain-name {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-domain-level-badge {
+  background: #2A214D !important;
+  color: #C4B5FD !important;
+}
+.cd-theme-dark .cd-domain-card-level {
+  color: #A78BFA !important;
+}
+.cd-theme-dark .cd-exercise-name {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-exercise-diff-pill {
+  background: #2A214D !important;
+  color: #C4B5FD !important;
+}
+.cd-theme-dark .cd-domain-ring-pct {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-domain-stat-mini-row span {
+  color: #9D97BF !important;
+}
+.cd-theme-dark .cd-domain-stat-mini-row strong {
+  color: #FFFFFF !important;
+}
+
+/* Empty State in Dark Mode */
+.cd-theme-dark .cd-empty-sessions {
+  background: #18142C !important;
+  border-color: #2B234D !important;
+  color: #9D97BF !important;
+}
+.cd-theme-dark .cd-empty-sessions p {
+  color: #C4C0DC !important;
+}
+
+/* Sessions Table in Dark Mode */
+.cd-theme-dark .cd-sessions-table-wrap {
+  background: #18142C !important;
+  border-color: #2B234D !important;
+}
+.cd-theme-dark .cd-sessions-table th {
+  background: #1F1938 !important;
+  color: #C4B5FD !important;
+  border-bottom-color: #2B234D !important;
+}
+.cd-theme-dark .cd-sessions-table td {
+  border-bottom-color: #251D44 !important;
+  color: #E8E5F7 !important;
+}
+.cd-theme-dark .cd-session-exercise {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-session-score {
+  color: #FFFFFF !important;
+}
+.cd-theme-dark .cd-session-time,
+.cd-theme-dark .cd-session-date {
+  color: #9D97BF !important;
+}
+.cd-theme-dark .cd-session-accuracy-bar {
+  background: #251D44 !important;
+}
+.cd-theme-dark .cd-session-accuracy-text {
+  color: #FFFFFF !important;
+}
+
+
+
+

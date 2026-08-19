@@ -3,7 +3,7 @@ NeuroAdapt FastAPI Backend Entry Point.
 Connects directly to Supabase PostgreSQL database.
 """
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
@@ -11,7 +11,7 @@ from typing import Optional
 from datetime import datetime
 
 from .database import engine, Base, get_db
-from .models import User, Child, Exercise, SessionRecord, Performance, Recommendation, TherapyPlan, Assignment
+from .models import User, Child, Exercise, SessionRecord, Performance, Recommendation, TherapyPlan, Assignment, Notification
 from .schemas import (
     UserCreate,
     UserResponse,
@@ -22,6 +22,7 @@ from .schemas import (
     SessionCompletionPayload,
 )
 from .services.mistral_service import generate_mistral_clinical_insights
+from .services.pdf_report_service import build_clinical_report_pdf
 
 # Create database tables if not exist
 Base.metadata.create_all(bind=engine)
@@ -51,6 +52,8 @@ class SignupRequest(BaseModel):
     email: str
     password: str
     role: str
+    age: Optional[int] = 8
+    condition: Optional[str] = "Cognitive Retraining"
 
 @app.get("/")
 def read_root():
@@ -127,14 +130,15 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    # If role is child, also create entry in children table
+    # If role is child, also create entry in children table with submitted age
     if new_user.role == "child":
+        child_age = int(req.age) if (req.age and req.age > 0) else 8
         child_profile = Child(
             caregiver_id=None,
             clinician_id=None,
             name=new_user.name,
-            age=8,
-            profile_data={"condition": "Cognitive Retraining", "baseline_score": 70, "signup_source": "portal_web"},
+            age=child_age,
+            profile_data={"condition": req.condition or "Cognitive Retraining", "baseline_score": 70, "signup_source": "portal_web"},
             created_at=datetime.utcnow()
         )
         db.add(child_profile)
@@ -166,13 +170,16 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
             detail=f"Access denied: This account is registered as a {user_role_name}. Please choose the {user_role_name} Portal to sign in."
         )
 
+    child_rec = db.query(Child).filter(Child.name == user.name).first() if user.role == "child" else None
+
     return {
         "message": "Login successful",
         "user": {
             "id": user.id,
             "name": user.name,
             "email": user.email,
-            "role": user.role
+            "role": user.role,
+            "age": child_rec.age if child_rec else None
         }
     }
 
@@ -292,8 +299,10 @@ def get_child_dashboard(user_id: int, db: Session = Depends(get_db)):
             "name": user.name,
             "email": user.email,
             "role": user.role,
+            "age": child.age if child else 8,
         },
         "child_id": child_id,
+        "child_age": child.age if child else 8,
         "stats": {
             "total_sessions": total_sessions,
             "today_sessions": today_sessions,
@@ -855,6 +864,128 @@ def generate_ai_clinical_insights(child_id: int, db: Session = Depends(get_db)):
     return insights
 
 
+@app.get("/api/clinician/reports/{child_id}/pdf")
+def download_clinical_report_pdf(child_id: int, clinician_id: Optional[int] = None, db: Session = Depends(get_db)):
+    """
+    PRD Section 14: Generates downloadable clinical PDF progress report for pediatric patient.
+    Aggregates demographic profile, real telemetry, Mistral AI decision support, and therapy boundaries.
+    """
+    child = db.query(Child).filter(Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child patient not found")
+
+    clinician = None
+    if clinician_id:
+        clinician = db.query(User).filter(User.id == clinician_id).first()
+    if not clinician and child.clinician_id:
+        clinician = db.query(User).filter(User.id == child.clinician_id).first()
+    if not clinician:
+        clinician = db.query(User).filter(User.role == "clinician").order_by(User.id.desc()).first()
+
+    clinician_name = clinician.name if clinician else "Dr. Poorvik"
+
+    sessions = db.query(SessionRecord).filter(SessionRecord.child_id == child_id).order_by(SessionRecord.started_at.desc()).all()
+    session_ids = [s.id for s in sessions]
+    perfs = db.query(Performance).filter(Performance.session_id.in_(session_ids)).all() if session_ids else []
+
+    total_xp = sum(p.score for p in perfs) if perfs else 0
+    avg_overall = round(sum(p.accuracy for p in perfs) / len(perfs), 1) if perfs else 0
+    avg_rt_sec = round((sum(p.response_time for p in perfs) / len(perfs)) / 1000, 2) if perfs else 2.48
+
+    # Aggregate domain stats
+    domain_stats = {}
+    for d in ["attention", "memory", "reasoning", "problem_solving"]:
+        d_sessions = db.query(SessionRecord).join(Exercise).filter(
+            SessionRecord.child_id == child_id,
+            Exercise.domain == d
+        ).all()
+        d_sids = [s.id for s in d_sessions]
+        d_perfs = db.query(Performance).filter(Performance.session_id.in_(d_sids)).all() if d_sids else []
+        domain_stats[d] = {
+            "sessions_count": len(d_sessions),
+            "avg_accuracy": round(sum(p.accuracy for p in d_perfs) / len(d_perfs), 1) if d_perfs else 0,
+            "avg_rt_ms": round(sum(p.response_time for p in d_perfs) / len(d_perfs), 1) if d_perfs else 0,
+            "max_difficulty": max((p.difficulty for p in d_perfs), default=1)
+        }
+
+    recent_sample = []
+    for s in sessions[:5]:
+        p = db.query(Performance).filter(Performance.session_id == s.id).first()
+        ex = db.query(Exercise).filter(Exercise.id == s.exercise_id).first()
+        if p and ex:
+            recent_sample.append({
+                "exercise": ex.name,
+                "domain": ex.domain,
+                "accuracy": p.accuracy,
+                "score": p.score,
+                "difficulty": p.difficulty,
+                "response_time_sec": round(p.response_time / 1000, 2)
+            })
+
+    condition = (child.profile_data or {}).get("condition", "ADHD & Cognitive Rehabilitation")
+    baseline = (child.profile_data or {}).get("baseline_score", 72)
+
+    # Generate or retrieve AI Insights
+    ai_insights = generate_mistral_clinical_insights(
+        child_name=child.name,
+        age=child.age,
+        condition=condition,
+        baseline_score=baseline,
+        total_sessions=len(sessions),
+        avg_accuracy=avg_overall,
+        avg_rt_sec=avg_rt_sec,
+        domain_stats=domain_stats,
+        recent_sessions=recent_sample
+    )
+
+    # Retrieve active therapy plan
+    plan_record = db.query(TherapyPlan).filter(TherapyPlan.child_id == child_id).first()
+    therapy_plan_dict = {
+        "target_domains": plan_record.target_domains if plan_record and plan_record.target_domains else ["Attention", "Memory", "Reasoning"],
+        "min_difficulty": plan_record.min_difficulty if plan_record else 1,
+        "max_difficulty": plan_record.max_difficulty if plan_record else 5,
+        "schedule_notes": plan_record.schedule_notes if plan_record else "3 home training sessions per week, 15 minutes each."
+    }
+
+    patient_payload = {
+        "id": child.id,
+        "name": child.name,
+        "age": child.age,
+        "condition": condition,
+        "baseline_score": baseline,
+        "clinician_name": clinician_name,
+        "stats": {
+            "total_sessions": len(sessions),
+            "avg_accuracy": avg_overall,
+            "total_xp": total_xp,
+            "avg_rt_sec": avg_rt_sec,
+        }
+    }
+
+    pdf_bytes = build_clinical_report_pdf(
+        patient_data=patient_payload,
+        ai_insights=ai_insights,
+        domain_stats=domain_stats,
+        recent_sessions=recent_sample,
+        therapy_plan=therapy_plan_dict,
+    )
+
+    clean_name = child.name.replace(" ", "_").replace("/", "_")
+    filename = f"NeuroAdapt_Clinical_Report_{clean_name}_Patient{child.id}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+
+
 # =====================================================================
 # ASSIGNMENTS & SESSION TELEMETRY PIPELINE (PRD SECTIONS 10, 11, 12, 17)
 # =====================================================================
@@ -863,6 +994,7 @@ def generate_ai_clinical_insights(child_id: int, db: Session = Depends(get_db)):
 def create_exercise_assignment(req: AssignmentCreateRequest, db: Session = Depends(get_db)):
     """
     Clinician creates a structured cognitive exercise assignment for a child.
+    Stores assignment and generates persistent notification in DB for child.
     """
     child = db.query(Child).filter(Child.id == req.child_id).first()
     if not child:
@@ -871,9 +1003,13 @@ def create_exercise_assignment(req: AssignmentCreateRequest, db: Session = Depen
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
 
+    clinician_id = req.clinician_id or 2
+    clinician = db.query(User).filter(User.id == clinician_id).first()
+    clinician_name = clinician.name if clinician else "Dr. Rajesh Mehta"
+
     new_assignment = Assignment(
         child_id=req.child_id,
-        clinician_id=req.clinician_id or 2,
+        clinician_id=clinician_id,
         exercise_id=req.exercise_id,
         difficulty=req.difficulty,
         notes=req.notes or f"Assigned {exercise.name} ({exercise.domain.capitalize()}) protocol",
@@ -884,8 +1020,24 @@ def create_exercise_assignment(req: AssignmentCreateRequest, db: Session = Depen
     db.commit()
     db.refresh(new_assignment)
 
+    # Automatically create persistent DB notification for this child
+    child_user = db.query(User).filter(User.name == child.name).first()
+    child_user_id = child_user.id if child_user else child.id
+
+    notif = Notification(
+        user_id=child_user_id,
+        title=f"New Exercise Prescribed by {clinician_name}",
+        message=f"{clinician_name} assigned '{exercise.name}' ({exercise.domain.capitalize()} • Level {req.difficulty}). Note: {new_assignment.notes}",
+        type="assignment",
+        link="/child",
+        is_read=False,
+        created_at=datetime.utcnow()
+    )
+    db.add(notif)
+    db.commit()
+
     return {
-        "message": "Exercise assigned successfully to child patient",
+        "message": "Exercise assigned successfully to child patient and notification dispatched",
         "assignment": {
             "id": new_assignment.id,
             "child_id": new_assignment.child_id,
@@ -965,8 +1117,9 @@ def get_child_assignments(child_id: int, db: Session = Depends(get_db)):
 def complete_exercise_session(req: SessionCompletionPayload, db: Session = Depends(get_db)):
     """
     Core Loop Completion (PRD Sections 10, 11, 12, 17):
-    Child completes exercise -> Telemetry recorded -> Assignment marked done ->
-    Adaptive difficulty recalculated -> Instant result stream to Clinician.
+    Child completes exercise -> Telemetry recorded in DB -> Assignment marked done ->
+    Adaptive difficulty recalculated -> Clinician notification created ->
+    Instant result stream to Clinician.
     """
     child = db.query(Child).filter(Child.id == req.child_id).first()
     if not child:
@@ -977,7 +1130,7 @@ def complete_exercise_session(req: SessionCompletionPayload, db: Session = Depen
 
     now = datetime.utcnow()
 
-    # 1. Create SessionRecord
+    # 1. Create SessionRecord in DB
     session_rec = SessionRecord(
         child_id=req.child_id,
         exercise_id=req.exercise_id,
@@ -988,7 +1141,7 @@ def complete_exercise_session(req: SessionCompletionPayload, db: Session = Depen
     db.commit()
     db.refresh(session_rec)
 
-    # 2. Create Performance telemetry
+    # 2. Create Performance telemetry in DB
     perf = Performance(
         session_id=session_rec.id,
         score=req.score,
@@ -1027,10 +1180,23 @@ def complete_exercise_session(req: SessionCompletionPayload, db: Session = Depen
         created_at=now
     )
     db.add(rec)
+
+    # 5. Automatically create persistent DB notification for supervising Clinician
+    clinician_user_id = child.clinician_id or 2
+    clinician_notif = Notification(
+        user_id=clinician_user_id,
+        title=f"Session Completed by {child.name}",
+        message=f"{child.name} completed '{exercise.name}' (Level {req.difficulty}) with {req.accuracy}% accuracy ({req.score} XP).",
+        type="session_complete",
+        link=f"/clinician/patients/{child.id}",
+        is_read=False,
+        created_at=now
+    )
+    db.add(clinician_notif)
     db.commit()
 
     return {
-        "message": "Exercise session completed successfully and dispatched to Clinician",
+        "message": "Exercise session completed successfully and stored in database",
         "session_id": session_rec.id,
         "score": req.score,
         "accuracy": req.accuracy,
@@ -1040,6 +1206,67 @@ def complete_exercise_session(req: SessionCompletionPayload, db: Session = Depen
         "adaptive_next_difficulty": new_diff,
         "stars_earned": max(10, int(req.score // 10)),
     }
+
+
+# =====================================================================
+# NOTIFICATIONS SYSTEM (STORED IN DB)
+# =====================================================================
+
+@app.get("/api/notifications/{user_id}")
+def get_user_notifications(user_id: int, db: Session = Depends(get_db)):
+    """
+    Returns list of notifications and unread counter for a user from PostgreSQL DB.
+    """
+    notifs = db.query(Notification).filter(
+        Notification.user_id == user_id
+    ).order_by(Notification.created_at.desc()).limit(20).all()
+
+    unread_count = db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.is_read == False
+    ).count()
+
+    return {
+        "unread_count": unread_count,
+        "notifications": [
+            {
+                "id": n.id,
+                "title": n.title,
+                "message": n.message,
+                "type": n.type,
+                "link": n.link,
+                "is_read": n.is_read,
+                "created_at": n.created_at.isoformat() if n.created_at else None,
+            }
+            for n in notifs
+        ],
+    }
+
+
+@app.post("/api/notifications/{notification_id}/read")
+def mark_notification_read(notification_id: int, db: Session = Depends(get_db)):
+    """
+    Marks a specific notification as read in the DB.
+    """
+    notif = db.query(Notification).filter(Notification.id == notification_id).first()
+    if notif:
+        notif.is_read = True
+        db.commit()
+    return {"message": "Notification marked as read"}
+
+
+@app.post("/api/notifications/read-all/{user_id}")
+def mark_all_notifications_read(user_id: int, db: Session = Depends(get_db)):
+    """
+    Marks all notifications as read for a given user in the DB.
+    """
+    db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.is_read == False
+    ).update({"is_read": True})
+    db.commit()
+    return {"message": "All notifications marked as read"}
+
 
 
 

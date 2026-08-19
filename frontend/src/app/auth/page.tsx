@@ -158,6 +158,7 @@ function AuthContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [age, setAge] = useState<number | string>(9);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -169,6 +170,7 @@ function AuthContent() {
     setEmail("");
     setPassword("");
     setName("");
+    setAge(9);
     setErrorMessage("");
     setStep("form");
   };
@@ -192,6 +194,7 @@ function AuthContent() {
       setEmail("");
       setPassword("");
       setName("");
+      setAge(9);
       setErrorMessage("");
     }
   }, [searchParams]);
@@ -213,6 +216,7 @@ function AuthContent() {
             email: email.trim(),
             password: password,
             role: role,
+            age: role === "child" ? Number(age) || 8 : undefined,
           }),
         });
 
@@ -423,6 +427,25 @@ function AuthContent() {
                     required
                     type="text"
                     placeholder="Full name"
+                    className="auth-input"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Child Age field for child register */}
+            {mode === "register" && role === "child" && (
+              <div className="auth-input-group">
+                <div className="auth-input-wrapper">
+                  <Sparkles className="auth-input-icon" />
+                  <input
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    required
+                    type="number"
+                    min="3"
+                    max="18"
+                    placeholder="Child age (years, e.g. 9)"
                     className="auth-input"
                   />
                 </div>

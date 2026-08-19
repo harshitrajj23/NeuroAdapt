@@ -21,6 +21,7 @@ import {
   Calendar,
   ClipboardList,
   UserCheck,
+  Mic,
 } from "lucide-react";
 import { useChildContext } from "./layout";
 import InteractiveExerciseGame, { ExercisePlayConfig } from "./components/InteractiveExerciseGame";
@@ -341,6 +342,89 @@ function ActiveAssignmentsBanner({
   );
 }
 
+function VoiceMemoryBanner({ onStartVoiceChallenge }: { onStartVoiceChallenge: () => void }) {
+  return (
+    <div
+      className="cd-prescribed-banner"
+      style={{
+        background: "linear-gradient(135deg, #4C1D95 0%, #7C3AED 50%, #8B5CF6 100%)",
+        color: "white",
+        borderRadius: "22px",
+        padding: "24px 28px",
+        marginBottom: "28px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: "18px",
+        boxShadow: "0 12px 36px rgba(124, 58, 237, 0.28)",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+        <div
+          style={{
+            width: "56px",
+            height: "56px",
+            borderRadius: "18px",
+            background: "rgba(255, 255, 255, 0.18)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "28px",
+          }}
+        >
+          🎙️
+        </div>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+            <span
+              style={{
+                fontSize: "11px",
+                fontWeight: 800,
+                textTransform: "uppercase",
+                padding: "3px 10px",
+                borderRadius: "12px",
+                background: "rgba(255, 255, 255, 0.22)",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Voice Interactive AI
+            </span>
+            <span style={{ fontSize: "12.5px", opacity: 0.9 }}>Verbal Working Memory</span>
+          </div>
+          <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0, color: "white" }}>
+            Voice Memory Recall Challenge
+          </h3>
+          <p style={{ fontSize: "13.5px", opacity: 0.9, margin: "3px 0 0", maxWidth: "520px" }}>
+            Listen to spoken words, retain them in your working memory, and speak them back naturally to train auditory retention!
+          </p>
+        </div>
+      </div>
+
+      <button
+        onClick={onStartVoiceChallenge}
+        style={{
+          background: "white",
+          color: "#5B21B6",
+          border: "none",
+          padding: "12px 24px",
+          borderRadius: "14px",
+          fontWeight: 800,
+          fontSize: "14px",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          cursor: "pointer",
+          boxShadow: "0 6px 20px rgba(0, 0, 0, 0.15)",
+        }}
+      >
+        <Mic className="h-4 w-4 text-violet-700" /> Start Voice Challenge
+      </button>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════════════ */
 /*                 COGNITIVE DOMAIN PROGRESS CARDS                       */
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -606,11 +690,22 @@ export default function ChildDashboard() {
   };
 
   const handlePlayExercise = (ex: ExerciseData) => {
+    const liveDiff = dashData?.domain_stats?.[ex.domain]?.level || ex.difficulty || 1;
     setActiveGameConfig({
       exerciseId: ex.id,
       exerciseName: ex.name,
       domain: ex.domain,
-      difficulty: ex.difficulty || 1,
+      difficulty: liveDiff,
+    });
+  };
+
+  const handleStartVoiceChallenge = () => {
+    const memLvl = dashData?.domain_stats?.memory?.level || 3;
+    setActiveGameConfig({
+      exerciseId: 7,
+      exerciseName: "Voice Memory Recall",
+      domain: "memory",
+      difficulty: memLvl,
     });
   };
 
@@ -629,6 +724,9 @@ export default function ChildDashboard() {
     <>
       <WelcomeHero userName={displayName} stats={dashData.stats} onStartSession={handleStartSession} />
       <QuickStatsBar stats={dashData.stats} />
+
+      {/* Featured Voice Memory Challenge Banner */}
+      <VoiceMemoryBanner onStartVoiceChallenge={handleStartVoiceChallenge} />
 
       {/* Active Clinician Assignments Banner */}
       <ActiveAssignmentsBanner

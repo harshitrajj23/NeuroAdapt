@@ -13,6 +13,8 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    age: Optional[int] = 8
+    condition: Optional[str] = "Cognitive Support"
 
 class UserResponse(UserBase):
     id: int

@@ -13,11 +13,16 @@ import {
   Gamepad2,
   BarChart3,
   Trophy,
+  TrendingUp,
+  Award,
   Settings,
   LogOut,
   Bell,
   Search,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
+import NotificationBell from "../components/NotificationBell";
 import "./child-dashboard.css";
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -29,14 +34,26 @@ interface UserProfile {
   name: string;
   email: string;
   role: string;
+  age?: number;
 }
 
 interface ChildContextType {
   user: UserProfile | null;
   apiUrl: string;
+  theme: "light" | "dark";
+  setTheme: (t: "light" | "dark") => void;
+  fontSize: "normal" | "large" | "xlarge";
+  setFontSize: (s: "normal" | "large" | "xlarge") => void;
 }
 
-const ChildContext = createContext<ChildContextType>({ user: null, apiUrl: "" });
+const ChildContext = createContext<ChildContextType>({
+  user: null,
+  apiUrl: "",
+  theme: "light",
+  setTheme: () => {},
+  fontSize: "normal",
+  setFontSize: () => {},
+});
 
 export function useChildContext() {
   return useContext(ChildContext);
@@ -129,6 +146,8 @@ export default function ChildLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [theme, setThemeState] = useState<"light" | "dark">("light");
+  const [fontSize, setFontSizeState] = useState<"normal" | "large" | "xlarge">("normal");
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -145,6 +164,7 @@ export default function ChildLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     setMounted(true);
     try {
+      // Load user
       const stored = localStorage.getItem("neuroadapt_user");
       if (stored) {
         const parsed = JSON.parse(stored);
@@ -158,10 +178,36 @@ export default function ChildLayout({ children }: { children: React.ReactNode })
       } else {
         router.replace("/auth?role=child");
       }
+
+      // Load theme
+      const savedTheme = localStorage.getItem("neuroadapt_child_theme") as "light" | "dark" | null;
+      if (savedTheme === "light" || savedTheme === "dark") {
+        setThemeState(savedTheme);
+      }
+
+      // Load font size
+      const savedFont = localStorage.getItem("neuroadapt_child_fontsize") as "normal" | "large" | "xlarge" | null;
+      if (savedFont === "normal" || savedFont === "large" || savedFont === "xlarge") {
+        setFontSizeState(savedFont);
+      }
     } catch {
       router.replace("/auth?role=child");
     }
   }, [router]);
+
+  const setTheme = (t: "light" | "dark") => {
+    setThemeState(t);
+    try {
+      localStorage.setItem("neuroadapt_child_theme", t);
+    } catch {}
+  };
+
+  const setFontSize = (s: "normal" | "large" | "xlarge") => {
+    setFontSizeState(s);
+    try {
+      localStorage.setItem("neuroadapt_child_fontsize", s);
+    } catch {}
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("neuroadapt_user");
@@ -180,8 +226,8 @@ export default function ChildLayout({ children }: { children: React.ReactNode })
   const displayName = user.name || user.email?.split("@")[0] || "User";
 
   return (
-    <ChildContext.Provider value={{ user, apiUrl }}>
-      <div className="cd-layout">
+    <ChildContext.Provider value={{ user, apiUrl, theme, setTheme, fontSize, setFontSize }}>
+      <div className={`cd-layout cd-theme-${theme} cd-font-${fontSize}`} data-theme={theme}>
         <Sidebar userName={displayName} onLogout={handleLogout} />
         <main className="cd-main">
           {/* Top bar */}
@@ -190,13 +236,7 @@ export default function ChildLayout({ children }: { children: React.ReactNode })
               <h2 className="cd-topbar-title">{pageTitle}</h2>
             </div>
             <div className="cd-topbar-right">
-              <button className="cd-topbar-icon-btn" title="Search">
-                <Search className="h-[18px] w-[18px]" />
-              </button>
-              <button className="cd-topbar-icon-btn cd-topbar-bell" title="Notifications">
-                <Bell className="h-[18px] w-[18px]" />
-                <span className="cd-topbar-bell-dot" />
-              </button>
+              <NotificationBell userId={user.id} apiUrl={apiUrl} />
             </div>
           </header>
 

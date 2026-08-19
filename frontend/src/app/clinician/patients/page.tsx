@@ -16,6 +16,7 @@ import {
   AlertCircle,
   FileText,
   UserCheck,
+  Download,
 } from "lucide-react";
 import { useClinicianContext } from "../layout";
 
@@ -274,10 +275,23 @@ export default function PatientsPage() {
                         <span style={{ fontSize: "12px", color: "#D97706" }}>Default Protocol</span>
                       )}
                     </td>
-                    <td>
-                      <Link href={`/clinician/patients/${p.id}`} className="cl-table-action-btn">
-                        Profile <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <Link href={`/clinician/patients/${p.id}`} className="cl-table-action-btn">
+                          Profile <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                        <a
+                          href={`${apiUrl}/api/clinician/reports/${p.id}/pdf?clinician_id=${user?.id || ""}`}
+                          download={`NeuroAdapt_Report_${p.name.replace(/\s+/g, "_")}.pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="cl-table-action-btn"
+                          style={{ background: "#F5F3FF", color: "#6D28D9", borderColor: "#DDD6FE", textDecoration: "none" }}
+                          title="Download Patient PDF Report"
+                        >
+                          <Download className="h-3.5 w-3.5" /> PDF
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 );

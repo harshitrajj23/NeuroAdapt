@@ -16,6 +16,7 @@ import {
   Stethoscope,
   Plus,
 } from "lucide-react";
+import NotificationBell from "../components/NotificationBell";
 import "./clinician-dashboard.css";
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -204,9 +205,7 @@ export default function ClinicianLayout({ children }: { children: React.ReactNod
               <Link href="/clinician/patients" className="cl-topbar-action-btn">
                 <Plus className="h-4 w-4" /> Add Patient
               </Link>
-              <button className="cl-topbar-icon-btn" title="Notifications">
-                <Bell className="h-[18px] w-[18px]" />
-              </button>
+              <NotificationBell userId={user.id} apiUrl={apiUrl} />
             </div>
           </header>
 
