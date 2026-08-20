@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useChildContext } from "./layout";
 import InteractiveExerciseGame, { ExercisePlayConfig } from "./components/InteractiveExerciseGame";
+import VoiceInterviewModal from "./components/VoiceInterviewModal";
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 /*                       TYPES                                           */
@@ -342,36 +343,43 @@ function ActiveAssignmentsBanner({
   );
 }
 
-function VoiceMemoryBanner({ onStartVoiceChallenge }: { onStartVoiceChallenge: () => void }) {
+function VoiceMemoryBanner({
+  onStartInterview,
+  onStartVoiceChallenge,
+}: {
+  onStartInterview: () => void;
+  onStartVoiceChallenge: () => void;
+}) {
   return (
     <div
       className="cd-prescribed-banner"
       style={{
-        background: "linear-gradient(135deg, #4C1D95 0%, #7C3AED 50%, #8B5CF6 100%)",
+        background: "linear-gradient(135deg, #3B0764 0%, #6B21A8 45%, #7C3AED 100%)",
         color: "white",
-        borderRadius: "22px",
-        padding: "24px 28px",
+        borderRadius: "24px",
+        padding: "26px 30px",
         marginBottom: "28px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         flexWrap: "wrap",
-        gap: "18px",
-        boxShadow: "0 12px 36px rgba(124, 58, 237, 0.28)",
+        gap: "20px",
+        boxShadow: "0 14px 40px rgba(107, 33, 168, 0.32)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <div
           style={{
-            width: "56px",
-            height: "56px",
-            borderRadius: "18px",
-            background: "rgba(255, 255, 255, 0.18)",
-            backdropFilter: "blur(8px)",
+            width: "60px",
+            height: "60px",
+            borderRadius: "20px",
+            background: "rgba(255, 255, 255, 0.16)",
+            backdropFilter: "blur(10px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "28px",
+            fontSize: "30px",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
           }}
         >
           🎙️
@@ -389,38 +397,60 @@ function VoiceMemoryBanner({ onStartVoiceChallenge }: { onStartVoiceChallenge: (
                 letterSpacing: "0.5px",
               }}
             >
-              Voice Interactive AI
+              Adaptive AI Assessment
             </span>
-            <span style={{ fontSize: "12.5px", opacity: 0.9 }}>Verbal Working Memory</span>
+            <span style={{ fontSize: "12.5px", opacity: 0.9 }}>60–90s Dynamic Multi-Domain</span>
           </div>
-          <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0, color: "white" }}>
-            Voice Memory Recall Challenge
+          <h3 style={{ fontSize: "21px", fontWeight: 800, margin: 0, color: "white" }}>
+            AI Voice Cognitive Interview
           </h3>
-          <p style={{ fontSize: "13.5px", opacity: 0.9, margin: "3px 0 0", maxWidth: "520px" }}>
-            Listen to spoken words, retain them in your working memory, and speak them back naturally to train auditory retention!
+          <p style={{ fontSize: "13.5px", opacity: 0.92, margin: "3px 0 0", maxWidth: "540px" }}>
+            Adaptive spoken conversation testing Memory, Attention, and Reasoning. Questions dynamically adjust in real time based on your spoken answers!
           </p>
         </div>
       </div>
 
-      <button
-        onClick={onStartVoiceChallenge}
-        style={{
-          background: "white",
-          color: "#5B21B6",
-          border: "none",
-          padding: "12px 24px",
-          borderRadius: "14px",
-          fontWeight: 800,
-          fontSize: "14px",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "8px",
-          cursor: "pointer",
-          boxShadow: "0 6px 20px rgba(0, 0, 0, 0.15)",
-        }}
-      >
-        <Mic className="h-4 w-4 text-violet-700" /> Start Voice Challenge
-      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+        <button
+          onClick={onStartInterview}
+          style={{
+            background: "white",
+            color: "#581C87",
+            border: "none",
+            padding: "13px 24px",
+            borderRadius: "14px",
+            fontWeight: 800,
+            fontSize: "14.5px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            cursor: "pointer",
+            boxShadow: "0 6px 20px rgba(0, 0, 0, 0.18)",
+          }}
+        >
+          <Sparkles className="h-4 w-4 text-purple-700" /> Start AI Interview
+        </button>
+
+        <button
+          onClick={onStartVoiceChallenge}
+          style={{
+            background: "rgba(255, 255, 255, 0.15)",
+            color: "white",
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            padding: "13px 20px",
+            borderRadius: "14px",
+            fontWeight: 700,
+            fontSize: "13.5px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            cursor: "pointer",
+            backdropFilter: "blur(6px)",
+          }}
+        >
+          <Mic className="h-4 w-4 text-purple-200" /> Word Recall
+        </button>
+      </div>
     </div>
   );
 }
@@ -669,11 +699,19 @@ export default function ChildDashboard() {
       });
     } else if (exercises.length > 0) {
       const ex = exercises[0];
+      const liveDiff = dashData?.domain_stats?.[ex.domain]?.level || ex.difficulty || 1;
       setActiveGameConfig({
         exerciseId: ex.id,
         exerciseName: ex.name,
         domain: ex.domain,
-        difficulty: ex.difficulty || 1,
+        difficulty: liveDiff,
+      });
+    } else {
+      setActiveGameConfig({
+        exerciseId: 1,
+        exerciseName: "Focus Matrix",
+        domain: "attention",
+        difficulty: 1,
       });
     }
   };
@@ -697,6 +735,12 @@ export default function ChildDashboard() {
       domain: ex.domain,
       difficulty: liveDiff,
     });
+  };
+
+  const [isInterviewOpen, setIsInterviewOpen] = useState(false);
+
+  const handleStartInterview = () => {
+    setIsInterviewOpen(true);
   };
 
   const handleStartVoiceChallenge = () => {
@@ -725,8 +769,11 @@ export default function ChildDashboard() {
       <WelcomeHero userName={displayName} stats={dashData.stats} onStartSession={handleStartSession} />
       <QuickStatsBar stats={dashData.stats} />
 
-      {/* Featured Voice Memory Challenge Banner */}
-      <VoiceMemoryBanner onStartVoiceChallenge={handleStartVoiceChallenge} />
+      {/* Featured AI Voice Cognitive Interview & Memory Banner */}
+      <VoiceMemoryBanner
+        onStartInterview={handleStartInterview}
+        onStartVoiceChallenge={handleStartVoiceChallenge}
+      />
 
       {/* Active Clinician Assignments Banner */}
       <ActiveAssignmentsBanner
@@ -739,6 +786,19 @@ export default function ChildDashboard() {
       <ExercisesList exercises={exercises} onPlayExercise={handlePlayExercise} />
 
       <RecentSessions sessions={dashData.recent_sessions} />
+
+      {/* AI Voice Cognitive Interview Interactive Modal */}
+      {isInterviewOpen && (
+        <VoiceInterviewModal
+          childId={dashData.child_id || dashData.user.id}
+          childName={displayName}
+          apiUrl={apiUrl}
+          onClose={() => setIsInterviewOpen(false)}
+          onComplete={() => {
+            fetchData();
+          }}
+        />
+      )}
 
       {/* Interactive Playable Game Modal */}
       {activeGameConfig && (

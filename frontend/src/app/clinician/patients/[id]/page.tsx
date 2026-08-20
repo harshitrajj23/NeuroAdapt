@@ -26,6 +26,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useClinicianContext } from "../../layout";
+import VoiceInterviewSummaryCard, { VoiceInterviewRecord } from "../../components/VoiceInterviewSummaryCard";
 
 interface ChildDetailResponse {
   child: {
@@ -119,6 +120,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
   const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
   const [exercises, setExercises] = useState<ExerciseOption[]>([]);
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
+  const [voiceInterview, setVoiceInterview] = useState<VoiceInterviewRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -139,10 +141,11 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
 
   const fetchChildData = async () => {
     try {
-      const [childRes, exRes, assignRes] = await Promise.all([
+      const [childRes, exRes, assignRes, ivRes] = await Promise.all([
         fetch(`${apiUrl}/api/clinician/child/${childId}`).then((r) => (r.ok ? r.json() : null)),
         fetch(`${apiUrl}/api/exercises`).then((r) => (r.ok ? r.json() : [])),
         fetch(`${apiUrl}/api/child/${childId}/assignments`).then((r) => (r.ok ? r.json() : [])),
+        fetch(`${apiUrl}/api/interviews/latest/${childId}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
 
       if (childRes) {
@@ -160,6 +163,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
         setSelectedExId(exList[0].id);
       }
       setAssignments(Array.isArray(assignRes) ? assignRes : []);
+      if (ivRes) {
+        setVoiceInterview(ivRes);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -634,6 +640,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       </div>
+
+      {/* AI Voice Cognitive Interview Summary */}
+      {voiceInterview && (
+        <div className="cl-section" style={{ marginBottom: "32px" }}>
+          <VoiceInterviewSummaryCard interview={voiceInterview} />
+        </div>
+      )}
 
       {/* Domain Breakdown Grid */}
       <div className="cl-section">

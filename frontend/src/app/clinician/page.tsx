@@ -22,6 +22,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useClinicianContext } from "./layout";
+import VoiceInterviewSummaryCard, { VoiceInterviewRecord } from "./components/VoiceInterviewSummaryCard";
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 /*                       INTERFACES                                      */
@@ -111,6 +112,7 @@ export default function ClinicianDashboard() {
   const { user, apiUrl, refreshTrigger } = useClinicianContext();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [patients, setPatients] = useState<ChildSummary[]>([]);
+  const [latestInterview, setLatestInterview] = useState<VoiceInterviewRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -119,9 +121,10 @@ export default function ClinicianDashboard() {
     const fetchClinicianData = async () => {
       setLoading(true);
       try {
-        const [dashRes, patRes] = await Promise.all([
+        const [dashRes, patRes, ivRes] = await Promise.all([
           fetch(`${apiUrl}/api/clinician/dashboard/${user.id}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
           fetch(`${apiUrl}/api/clinician/children/${user.id}`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+          fetch(`${apiUrl}/api/interviews/clinician/${user.id}`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
         ]);
 
         if (dashRes) {
@@ -150,6 +153,9 @@ export default function ClinicianDashboard() {
         }
 
         setPatients(Array.isArray(patRes) ? patRes : []);
+        if (Array.isArray(ivRes) && ivRes.length > 0) {
+          setLatestInterview(ivRes[0]);
+        }
       } catch {
         setData(null);
       } finally {
@@ -279,6 +285,13 @@ export default function ClinicianDashboard() {
               </Link>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Featured AI Voice Cognitive Session Summary */}
+      {latestInterview && (
+        <div className="cl-section" style={{ marginBottom: "32px" }}>
+          <VoiceInterviewSummaryCard interview={latestInterview} />
         </div>
       )}
 

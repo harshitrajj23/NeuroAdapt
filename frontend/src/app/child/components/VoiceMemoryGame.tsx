@@ -14,10 +14,9 @@ import {
   Zap,
   ArrowRight,
   Clock,
-  Sparkle,
-  HelpCircle,
   X,
-  VolumeX,
+  Radio,
+  Loader2,
 } from "lucide-react";
 import { ExercisePlayConfig } from "./InteractiveExerciseGame";
 
@@ -85,6 +84,40 @@ const WORD_POOLS: Record<number, WordItem[]> = {
   ],
 };
 
+// Lightweight PCM WAV Encoder
+function encodeWAV(samples: Float32Array, sampleRate = 16000): Blob {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+
+  function writeString(offset: number, str: string) {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  }
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM format
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true); // byte rate (16000 * 2)
+  view.setUint16(32, 2, true); // block align
+  view.setUint16(34, 16, true); // 16-bit
+  writeString(36, "data");
+  view.setUint32(40, samples.length * 2, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+
+  return new Blob([view], { type: "audio/wav" });
+}
+
 export default function VoiceMemoryGame({
   config,
   childId,
@@ -99,79 +132,304 @@ export default function VoiceMemoryGame({
   const [currentSpeakingIndex, setCurrentSpeakingIndex] = useState<number | null>(null);
   const [studyCountdown, setStudyCountdown] = useState<number>(6);
   const [isListening, setIsListening] = useState<boolean>(false);
+  const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
   const [liveTranscript, setLiveTranscript] = useState<string>("");
   const [manualText, setManualText] = useState<string>("");
+  const [audioVolume, setAudioVolume] = useState<number>(0);
   const [recalledWords, setRecalledWords] = useState<string[]>([]);
   const [missedWords, setMissedWords] = useState<string[]>([]);
   const [accuracy, setAccuracy] = useState<number>(0);
   const [xpEarned, setXpEarned] = useState<number>(0);
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [speechSupported, setSpeechSupported] = useState<boolean>(true);
   const [nextLevelRec, setNextLevelRec] = useState<number>(diff);
 
+  const shouldListenRef = useRef<boolean>(false);
   const recognitionRef = useRef<any>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordedSamplesRef = useRef<Float32Array[]>([]);
+  const animFrameRef = useRef<number | null>(null);
+  const lastTranscribeTimeRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
 
-  // Initialize Speech Recognition
+  // Initialize Speech Recognition (Client Web Speech API)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
       if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = "en-US";
+        try {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = "en-US";
 
-        recognition.onresult = (event: any) => {
-          let currentTranscript = "";
-          for (let i = 0; i < event.results.length; i++) {
-            currentTranscript += event.results[i][0].transcript + " ";
-          }
-          setLiveTranscript(currentTranscript.trim());
-        };
+          recognition.onresult = (event: any) => {
+            let currentTranscript = "";
+            for (let i = 0; i < event.results.length; i++) {
+              currentTranscript += event.results[i][0].transcript + " ";
+            }
+            const cleanText = currentTranscript.trim();
+            if (cleanText) {
+              setLiveTranscript(cleanText);
+              setManualText((prev) => {
+                const combined = `${prev} ${cleanText}`.trim();
+                return Array.from(new Set(combined.split(/\s+/))).join(" ");
+              });
+            }
+          };
 
-        recognition.onerror = (event: any) => {
-          console.warn("Speech recognition error:", event.error);
-          setIsListening(false);
-        };
+          recognition.onerror = () => {
+            // Non-fatal, server-side transcribe handles audio buffers
+          };
 
-        recognition.onend = () => {
-          setIsListening(false);
-        };
+          recognition.onend = () => {
+            if (shouldListenRef.current) {
+              setTimeout(() => {
+                try {
+                  if (shouldListenRef.current) recognition.start();
+                } catch {}
+              }, 300);
+            }
+          };
 
-        recognitionRef.current = recognition;
-      } else {
-        setSpeechSupported(false);
+          recognitionRef.current = recognition;
+        } catch {}
       }
     }
 
     return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {}
-      }
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      cleanupAudio();
     };
   }, []);
 
-  // Audio Speech Synthesis function
-  const speakText = (text: string, rate = 0.85): Promise<void> => {
+  const cleanupAudio = () => {
+    shouldListenRef.current = false;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+    }
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch {}
+      audioContextRef.current = null;
+    }
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  };
+
+  // Perform server-side audio transcription via /api/voice/transcribe
+  const sendAudioForTranscription = async () => {
+    if (recordedSamplesRef.current.length === 0 || isTranscribing) return;
+
+    // Flatten collected Float32 audio samples
+    const totalLength = recordedSamplesRef.current.reduce((acc, curr) => acc + curr.length, 0);
+    if (totalLength < 8000) return; // Ignore less than 0.5s of audio
+
+    const merged = new Float32Array(totalLength);
+    let offset = 0;
+    for (const chunk of recordedSamplesRef.current) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    // Downsample to 16000Hz WAV
+    const wavBlob = encodeWAV(merged, 16000);
+    setIsTranscribing(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", wavBlob, "recording.wav");
+
+      const res = await fetch(`${apiUrl}/api/voice/transcribe`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.transcript && data.transcript.trim()) {
+          const spoken = data.transcript.trim();
+          setLiveTranscript((prev) => {
+            const newWords = spoken.split(/\s+/);
+            const existingWords = prev ? prev.trim().split(/\s+/) : [];
+            return Array.from(new Set([...existingWords, ...newWords])).join(" ");
+          });
+          setManualText((prev) => {
+            const newWords = spoken.split(/\s+/);
+            const existingWords = prev ? prev.trim().split(/\s+/) : [];
+            return Array.from(new Set([...existingWords, ...newWords])).join(" ");
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Backend audio transcription notice:", err);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // Real Hardware Microphone Stream & High-Accuracy WAV Buffer Collector
+  const startHardwareAudioStream = async () => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            sampleRate: 16000,
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
+        });
+        mediaStreamRef.current = stream;
+
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          const audioCtx = new AudioCtx({ sampleRate: 16000 });
+          audioContextRef.current = audioCtx;
+          const source = audioCtx.createMediaStreamSource(stream);
+
+          // Analyser for sound wave visualizer
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 64;
+          source.connect(analyser);
+
+          // ScriptProcessor for PCM audio recording
+          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+          processorRef.current = processor;
+          recordedSamplesRef.current = [];
+
+          processor.onaudioprocess = (e) => {
+            if (!shouldListenRef.current) return;
+            const channel = e.inputBuffer.getChannelData(0);
+            recordedSamplesRef.current.push(new Float32Array(channel));
+
+            // Auto-transcribe chunk every 3.5s of continuous speech
+            const now = Date.now();
+            if (now - lastTranscribeTimeRef.current > 3500 && recordedSamplesRef.current.length > 10) {
+              lastTranscribeTimeRef.current = now;
+              sendAudioForTranscription();
+            }
+          };
+
+          source.connect(processor);
+          processor.connect(audioCtx.destination);
+
+          // Animate live volume visualizer
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          const checkVolume = () => {
+            if (!shouldListenRef.current) return;
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+              sum += dataArray[i];
+            }
+            const avg = sum / dataArray.length;
+            setAudioVolume(Math.min(100, Math.round(avg * 1.8)));
+            animFrameRef.current = requestAnimationFrame(checkVolume);
+          };
+          checkVolume();
+        }
+      }
+    } catch (err) {
+      console.warn("Microphone access notice:", err);
+    }
+  };
+
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Reliable Cross-Browser Speech Player (HTML5 Audio + Server MP3 TTS stream)
+  const speakText = (text: string, _rate?: number): Promise<void> => {
     return new Promise((resolve) => {
-      if (typeof window === "undefined" || !window.speechSynthesis) {
+      if (typeof window === "undefined" || !text || !text.trim()) {
         resolve();
         return;
       }
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = rate;
-      utterance.pitch = 1.05;
-      utterance.onend = () => resolve();
-      utterance.onerror = () => resolve();
-      window.speechSynthesis.speak(utterance);
+
+      const cleanText = text.trim();
+
+      try {
+        if (activeAudioRef.current) {
+          activeAudioRef.current.pause();
+          activeAudioRef.current = null;
+        }
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+        }
+      } catch {}
+
+      let isDone = false;
+      const finish = () => {
+        if (!isDone) {
+          isDone = true;
+          activeAudioRef.current = null;
+          resolve();
+        }
+      };
+
+      const words = cleanText.split(/\s+/).length;
+      const maxMs = Math.max(1400, Math.min(8000, words * 400 + 1000));
+      const timer = setTimeout(finish, maxMs);
+
+      try {
+        const audioUrl = `${apiUrl}/api/voice/tts?text=${encodeURIComponent(cleanText)}`;
+        const audio = new Audio(audioUrl);
+        activeAudioRef.current = audio;
+
+        audio.onended = () => {
+          clearTimeout(timer);
+          finish();
+        };
+
+        audio.onerror = () => {
+          try {
+            if (window.speechSynthesis) {
+              window.speechSynthesis.resume();
+              const utterance = new SpeechSynthesisUtterance(cleanText);
+              utterance.onend = () => {
+                clearTimeout(timer);
+                finish();
+              };
+              utterance.onerror = () => {
+                clearTimeout(timer);
+                finish();
+              };
+              window.speechSynthesis.speak(utterance);
+              return;
+            }
+          } catch {}
+          clearTimeout(timer);
+          finish();
+        };
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn("Audio playback notice:", err);
+            clearTimeout(timer);
+            finish();
+          });
+        }
+      } catch (err) {
+        clearTimeout(timer);
+        finish();
+      }
     });
   };
 
@@ -213,41 +471,70 @@ export default function VoiceMemoryGame({
 
     await speakText("Tell me everything you remember.");
 
-    // Start Web Speech Recognition
+    // Enable continuous listening & hardware audio capture
+    startListeningEngine();
+  };
+
+  const startListeningEngine = async () => {
+    shouldListenRef.current = true;
+    setIsListening(true);
+    lastTranscribeTimeRef.current = Date.now();
+    await startHardwareAudioStream();
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.start();
-        setIsListening(true);
-      } catch (err) {
-        console.warn("Could not start speech recognition automatically:", err);
-      }
+      } catch {}
     }
   };
 
-  const toggleListening = () => {
-    if (!recognitionRef.current) return;
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (err) {
-        console.warn("Error starting mic:", err);
-      }
-    }
-  };
+  const stopListeningEngine = async () => {
+    shouldListenRef.current = false;
+    setIsListening(false);
+    setAudioVolume(0);
 
-  // Phase 3: Evaluate Recall & Submit Session
-  const evaluateAndSubmit = async () => {
+    // Finalize pending audio chunk transcription
+    await sendAudioForTranscription();
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch {}
-      setIsListening(false);
     }
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+    }
+  };
 
+  const toggleListening = () => {
+    if (isListening) {
+      stopListeningEngine();
+    } else {
+      startListeningEngine();
+    }
+  };
+
+  // Quick word chip click helper
+  const handleAddWordChip = (word: string) => {
+    setManualText((prev) => {
+      const trimmed = prev.trim();
+      if (!trimmed) return word;
+      if (trimmed.toLowerCase().includes(word.toLowerCase())) return trimmed;
+      return `${trimmed} ${word}`;
+    });
+  };
+
+  // Phase 3: Evaluate Recall & Submit Session
+  const evaluateAndSubmit = async () => {
+    await stopListeningEngine();
     const elapsedMs = Math.max(2000, Date.now() - startTimeRef.current);
 
     // Combine voice transcript + manual input
@@ -325,7 +612,7 @@ export default function VoiceMemoryGame({
   };
 
   return (
-    <div className="cd-modal-backdrop" style={{ zIndex: 120 }}>
+    <div className="cd-modal-backdrop" style={{ zIndex: 9999 }}>
       <div
         className="cd-modal-card"
         style={{
@@ -378,7 +665,13 @@ export default function VoiceMemoryGame({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="cd-modal-close-btn">
+          <button
+            onClick={() => {
+              cleanupAudio();
+              onClose();
+            }}
+            className="cd-modal-close-btn"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -425,7 +718,7 @@ export default function VoiceMemoryGame({
                 fontWeight: 600,
               }}
             >
-              <Volume2 className="h-4 w-4" /> Web Speech Audio Synthesis Ready
+              <Volume2 className="h-4 w-4" /> Dual Client + Server Speech Recognition Ready
             </div>
 
             <div>
@@ -527,17 +820,17 @@ export default function VoiceMemoryGame({
         {/* ════════════════════════════════════════════════════════════════ */}
         {phase === "recall" && (
           <div style={{ textAlign: "center", padding: "10px 0" }}>
-            <div style={{ marginBottom: "20px" }}>
-              <h3 style={{ fontSize: "22px", fontWeight: 800, color: "#1A1035", marginBottom: "6px" }}>
+            <div style={{ marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "22px", fontWeight: 800, color: "#1A1035", marginBottom: "4px" }}>
                 🎙️ Tell me everything you remember!
               </h3>
-              <p style={{ fontSize: "14px", color: "#6B6580", margin: 0 }}>
-                Speak clearly into your microphone, or type your words below.
+              <p style={{ fontSize: "13.5px", color: "#6B6580", margin: 0 }}>
+                Speak clearly into your microphone, tap word badges, or type below.
               </p>
             </div>
 
-            {/* Glowing Microphone Button */}
-            <div style={{ position: "relative", display: "inline-block", margin: "16px 0 24px" }}>
+            {/* Glowing Microphone Button & Live Audio Waveform */}
+            <div style={{ position: "relative", display: "inline-flex", flexDirection: "column", alignItems: "center", margin: "12px 0 16px" }}>
               <button
                 onClick={toggleListening}
                 style={{
@@ -545,7 +838,7 @@ export default function VoiceMemoryGame({
                   height: "88px",
                   borderRadius: "50%",
                   background: isListening
-                    ? "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)"
+                    ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"
                     : "linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)",
                   color: "white",
                   border: "none",
@@ -553,16 +846,44 @@ export default function VoiceMemoryGame({
                   alignItems: "center",
                   justifyContent: "center",
                   boxShadow: isListening
-                    ? "0 0 0 10px rgba(239, 68, 68, 0.2), 0 8px 30px rgba(239, 68, 68, 0.4)"
+                    ? `0 0 0 ${8 + Math.round(audioVolume / 8)}px rgba(16, 185, 129, 0.25), 0 8px 30px rgba(16, 185, 129, 0.4)`
                     : "0 0 0 8px rgba(124, 58, 237, 0.15), 0 8px 30px rgba(124, 58, 237, 0.3)",
                   cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  animation: isListening ? "pulse 1.5s infinite" : "none",
+                  transition: "all 0.2s ease",
                 }}
-                title={isListening ? "Listening... click to pause" : "Click to start recording"}
+                title={isListening ? "Microphone active — speak your words" : "Click to start microphone"}
               >
-                {isListening ? <Mic className="h-10 w-10 animate-bounce" /> : <MicOff className="h-10 w-10" />}
+                {isListening ? <Mic className="h-10 w-10 animate-pulse" /> : <MicOff className="h-10 w-10" />}
               </button>
+
+              {/* Real-time Audio Spectrum Indicator */}
+              <div style={{ display: "flex", alignItems: "center", gap: "5px", height: "24px", marginTop: "12px" }}>
+                {[0.4, 0.8, 1.2, 0.7, 0.5].map((factor, idx) => {
+                  const barHeight = isListening ? Math.max(6, Math.min(24, Math.round(audioVolume * factor * 0.35))) : 4;
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        width: "4px",
+                        height: `${barHeight}px`,
+                        borderRadius: "3px",
+                        background: isListening ? "#10B981" : "#DDD6FE",
+                        transition: "height 0.1s ease",
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: isListening ? "#059669" : "#6D28D9" }}>
+                  {isListening ? "🔴 Recording Voice" : "Tap Microphone to Speak"}
+                </span>
+                {isTranscribing && (
+                  <span style={{ fontSize: "11px", color: "#7C3AED", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                    <Loader2 className="h-3 w-3 animate-spin" /> transcribing...
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Spoken Transcript Live Box */}
@@ -571,35 +892,71 @@ export default function VoiceMemoryGame({
                 background: "#FAF8FF",
                 border: "1.5px dashed #DDD6FE",
                 borderRadius: "18px",
-                padding: "16px 20px",
-                minHeight: "72px",
+                padding: "14px 18px",
+                minHeight: "64px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                marginBottom: "18px",
+                marginBottom: "14px",
               }}
             >
               {liveTranscript ? (
-                <span style={{ fontSize: "16px", fontWeight: 600, color: "#1A1035", fontStyle: "italic" }}>
+                <span style={{ fontSize: "15px", fontWeight: 600, color: "#1A1035", fontStyle: "italic" }}>
                   &ldquo;{liveTranscript}&rdquo;
                 </span>
               ) : (
-                <span style={{ fontSize: "14px", color: "#9A94A9" }}>
-                  {isListening ? "Listening... speak words like 'apple, tiger, moon'..." : "Tap the microphone to speak, or type below"}
+                <span style={{ fontSize: "13.5px", color: "#9A94A9" }}>
+                  {isListening ? "Speak words into mic (or tap chips below)..." : "Say remembered words or use quick badges below"}
                 </span>
               )}
             </div>
 
+            {/* Quick Word Helper Badges */}
+            <div style={{ marginBottom: "16px", textAlign: "left" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "#6B6580", display: "block", marginBottom: "6px" }}>
+                Quick Recalled Word Chips (tap to add):
+              </span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {targetWords.map((item) => {
+                  const alreadyInText = `${liveTranscript} ${manualText}`.toLowerCase().includes(item.word.toLowerCase());
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleAddWordChip(item.word)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "12px",
+                        border: alreadyInText ? "1.5px solid #10B981" : "1px solid #E2E8F0",
+                        background: alreadyInText ? "#ECFDF5" : "#FFFFFF",
+                        color: alreadyInText ? "#065F46" : "#4A4560",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <span>{item.icon}</span>
+                      <span style={{ textTransform: "capitalize" }}>{item.word}</span>
+                      {alreadyInText && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Manual fallback input */}
-            <div style={{ marginBottom: "24px" }}>
+            <div style={{ marginBottom: "20px" }}>
               <input
                 type="text"
                 value={manualText}
                 onChange={(e) => setManualText(e.target.value)}
-                placeholder="Or type remembered words here (e.g. apple train tiger)..."
+                placeholder="Or type remembered words (e.g. apple train tiger)..."
                 style={{
                   width: "100%",
-                  padding: "12px 18px",
+                  padding: "12px 16px",
                   borderRadius: "14px",
                   border: "1px solid #E2E8F0",
                   fontSize: "14px",
@@ -612,7 +969,25 @@ export default function VoiceMemoryGame({
               />
             </div>
 
-            <div>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              {isListening && (
+                <button
+                  onClick={sendAudioForTranscription}
+                  className="cd-btn"
+                  disabled={isTranscribing}
+                  style={{
+                    background: "#EDE9FE",
+                    color: "#6D28D9",
+                    padding: "13px 20px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    borderRadius: "14px",
+                  }}
+                >
+                  {isTranscribing ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Volume2 className="h-4 w-4 mr-1.5" />}
+                  Transcribe Voice
+                </button>
+              )}
               <button
                 onClick={evaluateAndSubmit}
                 className="cd-btn cd-btn--primary"
@@ -771,6 +1146,7 @@ export default function VoiceMemoryGame({
               </button>
               <button
                 onClick={() => {
+                  cleanupAudio();
                   onComplete();
                   onClose();
                 }}

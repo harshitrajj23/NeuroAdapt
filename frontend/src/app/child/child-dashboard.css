@@ -699,11 +699,12 @@
   margin: 0 0 16px;
 }
 
+.cd-domain-ring-section,
 .cd-domain-progress-area {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-top: 4px;
 }
 
 .cd-domain-ring-wrapper {
@@ -711,40 +712,56 @@
   flex-shrink: 0;
   width: 72px;
   height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.cd-domain-ring-pct,
 .cd-domain-ring-text {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
+  color: #1A1035;
   font-family: 'Outfit', 'Inter', sans-serif;
+  pointer-events: none;
+  line-height: 1;
+  text-align: center;
 }
 
+.cd-domain-stats-mini,
 .cd-domain-meta {
   display: flex;
   flex-direction: column;
   gap: 6px;
   flex: 1;
+  min-width: 0;
 }
 
+.cd-domain-stat-mini-row,
 .cd-domain-meta-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
 }
 
+.cd-domain-stat-mini-row span,
 .cd-domain-meta-label {
-  font-size: 12.5px;
-  color: #9A94A9;
+  font-size: 12px;
+  color: #6B6580;
+  font-weight: 500;
 }
 
+.cd-domain-stat-mini-row strong,
 .cd-domain-meta-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: #4C4658;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1A1035;
 }
 
 .cd-domain-trend {
@@ -2420,7 +2437,67 @@
   background: rgba(124, 58, 237, 0.05) !important;
 }
 
-/* Modal Dialogs */
+/* ═══════════════════════════════════════════════════════════════════════ */
+/*                 CHILD MODAL OVERLAY & GAME DIALOGS                    */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+.cd-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(14, 12, 27, 0.75) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 9999 !important;
+  padding: 24px !important;
+  overflow-y: auto !important;
+  animation: fadeIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.cd-modal-card {
+  position: relative !important;
+  background: white;
+  border-radius: 28px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 80px rgba(124, 58, 237, 0.25);
+  animation: modalScaleUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  box-sizing: border-box;
+}
+
+@keyframes modalScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.cd-modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: none;
+  background: #F5F3FF;
+  color: #6D28D9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cd-modal-close-btn:hover {
+  background: #EDE9FE;
+  transform: rotate(90deg);
+}
+
+/* Modal Dialogs in Dark Mode */
 .cd-theme-dark .cd-modal-card {
   background: #18142C !important;
   border: 1px solid #382D63 !important;

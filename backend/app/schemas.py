@@ -88,4 +88,18 @@ class SessionCompletionPayload(BaseModel):
     errors: int = 0
     assignment_id: Optional[int] = None
 
+class VoiceInterviewSubmitPayload(BaseModel):
+    child_id: int
+    duration_seconds: int = 75
+    challenges_completed: int = 3
+    overall_accuracy: float = 0.0
+    memory_accuracy: float = 0.0
+    attention_accuracy: float = 0.0
+    reasoning_accuracy: float = 0.0
+    response_latency_ms: float = 1400.0
+    latency_delta_percent: Optional[float] = 0.0
+    adaptive_changes: Optional[Dict[str, Any]] = None
+    transcript: Optional[List[Dict[str, Any]]] = None
+
+
 

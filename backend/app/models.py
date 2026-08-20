@@ -109,3 +109,23 @@ class Notification(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class VoiceInterview(Base):
+    __tablename__ = "voice_interviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
+    duration_seconds = Column(Integer, default=75)
+    challenges_completed = Column(Integer, default=3)
+    overall_accuracy = Column(Float, default=0.0)
+    memory_accuracy = Column(Float, default=0.0)
+    attention_accuracy = Column(Float, default=0.0)
+    reasoning_accuracy = Column(Float, default=0.0)
+    response_latency_ms = Column(Float, default=0.0)
+    latency_delta_percent = Column(Float, default=0.0)
+    adaptive_changes = Column(JSON, nullable=True)
+    ai_observation = Column(Text, nullable=True)
+    transcript = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+
