@@ -13,13 +13,27 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./neuroadapt.db")
 
-connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {
+    "connect_timeout": 10,
+}
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args=connect_args,
-    echo=False
-)
+if "sqlite" in DATABASE_URL:
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args=connect_args,
+        echo=False
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args=connect_args,
+        pool_size=15,
+        max_overflow=10,
+        pool_timeout=15,
+        pool_recycle=300,
+        pool_pre_ping=True,
+        echo=False
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

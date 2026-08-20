@@ -102,4 +102,11 @@ class VoiceInterviewSubmitPayload(BaseModel):
     transcript: Optional[List[Dict[str, Any]]] = None
 
 
+class TelegramDispatchPayload(BaseModel):
+    child_id: int
+    message: str
+    chat_id: Optional[str] = None
+
+
+
 

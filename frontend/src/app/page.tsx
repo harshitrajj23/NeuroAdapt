@@ -54,7 +54,7 @@ function useParticles(ref: React.RefObject<HTMLCanvasElement | null>) {
     resize();
     window.addEventListener('resize', resize);
 
-    const n = Math.min(Math.floor((w * h) / 7000), 180);
+    const n = Math.min(Math.floor((w * h) / 14000), 75);
     pts.current = Array.from({ length: n }, () => {
       const x = Math.random() * w;
       const y = Math.random() * h;

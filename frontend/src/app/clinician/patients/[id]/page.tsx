@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useClinicianContext } from "../../layout";
 import VoiceInterviewSummaryCard, { VoiceInterviewRecord } from "../../components/VoiceInterviewSummaryCard";
+import TelegramParentDispatcher from "../../components/TelegramParentDispatcher";
 
 interface ChildDetailResponse {
   child: {
@@ -681,6 +682,15 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
           })}
         </div>
       </div>
+
+      {/* Direct Parent Telegram Dispatcher */}
+      <TelegramParentDispatcher
+        childId={child.id}
+        childName={child.name}
+        clinicianId={user?.id}
+        clinicianName={user?.name || "Dr. Poorvik"}
+        apiUrl={apiUrl}
+      />
 
       {/* Session Timeline Table */}
       <div className="cl-section">
