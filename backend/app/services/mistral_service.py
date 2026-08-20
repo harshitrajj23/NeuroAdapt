@@ -74,7 +74,7 @@ def generate_mistral_clinical_insights(
                 ],
                 "response_format": {"type": "json_object"},
                 "temperature": 0.2,
-                "max_tokens": 1200,
+                "max_tokens": 650,
             }
 
             req = urllib.request.Request(
@@ -86,7 +86,7 @@ def generate_mistral_clinical_insights(
                 }
             )
 
-            with urllib.request.urlopen(req, timeout=15) as response:
+            with urllib.request.urlopen(req, timeout=20) as response:
                 if response.status == 200:
                     resp_body = json.loads(response.read().decode("utf-8"))
                     content_str = resp_body["choices"][0]["message"]["content"]

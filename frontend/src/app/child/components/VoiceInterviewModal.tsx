@@ -214,8 +214,31 @@ export default function VoiceInterviewModal({
   const animFrameRef = useRef<number | null>(null);
 
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isSpeakingRef = useRef<boolean>(false);
+  const speakTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
 
-  // Reliable Cross-Browser Speech Player (HTML5 Audio + Server MP3 TTS stream)
+  // Force-stop all audio immediately
+  const stopAllAudio = () => {
+    try {
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.currentTime = 0;
+        activeAudioRef.current = null;
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    } catch {}
+    isSpeakingRef.current = false;
+    setIsSpeaking(false);
+    if (speakTimerRef.current) {
+      clearTimeout(speakTimerRef.current);
+      speakTimerRef.current = null;
+    }
+  };
+
+  // Reliable Cross-Browser Speech Player (with double-click guard)
   const speak = (text: string, _rate?: number): Promise<void> => {
     return new Promise((resolve) => {
       if (typeof window === "undefined" || !text || !text.trim()) {
@@ -225,22 +248,21 @@ export default function VoiceInterviewModal({
 
       const cleanText = text.trim();
 
-      // Cancel any currently playing audio
-      try {
-        if (activeAudioRef.current) {
-          activeAudioRef.current.pause();
-          activeAudioRef.current = null;
-        }
-        if (window.speechSynthesis) {
-          window.speechSynthesis.cancel();
-        }
-      } catch {}
+      // Cancel any currently playing audio first
+      stopAllAudio();
+
+      // Mark as speaking (guard against double invocations)
+      isSpeakingRef.current = true;
+      setIsSpeaking(true);
 
       let isDone = false;
       const finish = () => {
         if (!isDone) {
           isDone = true;
+          isSpeakingRef.current = false;
+          setIsSpeaking(false);
           activeAudioRef.current = null;
+          speakTimerRef.current = null;
           resolve();
         }
       };
@@ -248,7 +270,7 @@ export default function VoiceInterviewModal({
       // Word count safety limit
       const words = cleanText.split(/\s+/).length;
       const maxMs = Math.max(1800, Math.min(9000, words * 450 + 1200));
-      const timer = setTimeout(finish, maxMs);
+      speakTimerRef.current = setTimeout(finish, maxMs);
 
       try {
         // Stream real MP3 audio from backend TTS endpoint (100% works in Brave & all browsers)
@@ -257,7 +279,7 @@ export default function VoiceInterviewModal({
         activeAudioRef.current = audio;
 
         audio.onended = () => {
-          clearTimeout(timer);
+          if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
           finish();
         };
 
@@ -268,37 +290,38 @@ export default function VoiceInterviewModal({
               window.speechSynthesis.resume();
               const utterance = new SpeechSynthesisUtterance(cleanText);
               utterance.onend = () => {
-                clearTimeout(timer);
+                if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
                 finish();
               };
               utterance.onerror = () => {
-                clearTimeout(timer);
+                if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
                 finish();
               };
               window.speechSynthesis.speak(utterance);
               return;
             }
           } catch {}
-          clearTimeout(timer);
+          if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
           finish();
         };
 
         const playPromise = audio.play();
         if (playPromise !== undefined) {
-          playPromise.catch((err) => {
-            console.warn("Audio playback notice:", err);
-            clearTimeout(timer);
+          playPromise.catch(() => {
+            if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
             finish();
           });
         }
-      } catch (err) {
-        clearTimeout(timer);
+      } catch {
+        if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
         finish();
       }
     });
   };
 
-  // Client speech recognition
+  // Client speech recognition — generation counter to discard stale callbacks
+  const roundGenerationRef = useRef<number>(0);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const SpeechRecognition =
@@ -312,17 +335,22 @@ export default function VoiceInterviewModal({
           rec.lang = "en-US";
 
           rec.onresult = (event: any) => {
-            let current = "";
+            const gen = roundGenerationRef.current;
+            // Only use FINAL results to avoid duplication
+            let finalTranscript = "";
             for (let i = 0; i < event.results.length; i++) {
-              current += event.results[i][0].transcript + " ";
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript + " ";
+              }
             }
-            const clean = current.trim();
-            if (clean) {
+            // Also grab the latest interim for live preview
+            const lastResult = event.results[event.results.length - 1];
+            const interim = lastResult && !lastResult.isFinal ? lastResult[0].transcript : "";
+
+            const clean = (finalTranscript + interim).trim();
+            // Discard if round changed since this recognition started
+            if (clean && gen === roundGenerationRef.current) {
               setSpokenTranscript(clean);
-              setTypedAnswer((prev) => {
-                const combined = `${prev} ${clean}`.trim();
-                return Array.from(new Set(combined.split(/\s+/))).join(" ");
-              });
             }
           };
 
@@ -424,9 +452,12 @@ export default function VoiceInterviewModal({
     } catch {}
   };
 
-  // Server-side transcription
-  const sendAudioForTranscription = async () => {
-    if (recordedSamplesRef.current.length === 0 || isTranscribing) return;
+  // Server-side transcription (fire-and-forget, non-blocking)
+  // NOTE: This no longer writes to UI state to avoid duplication with browser SpeechRecognition
+  const pendingTranscriptRef = useRef<Promise<string> | null>(null);
+
+  const sendAudioForTranscription = () => {
+    if (recordedSamplesRef.current.length === 0) return;
     const totalLength = recordedSamplesRef.current.reduce((acc, curr) => acc + curr.length, 0);
     if (totalLength < 6000) return;
 
@@ -440,32 +471,31 @@ export default function VoiceInterviewModal({
     const wavBlob = encodeWAV(merged, 16000);
     setIsTranscribing(true);
 
-    try {
-      const formData = new FormData();
-      formData.append("file", wavBlob, "interview.wav");
+    // Fire the transcription but DON'T write to spokenTranscript/typedAnswer
+    // (browser SpeechRecognition already handles that in real-time)
+    const transcriptionPromise = (async (): Promise<string> => {
+      try {
+        const formData = new FormData();
+        formData.append("file", wavBlob, "interview.wav");
 
-      const res = await fetch(`${apiUrl}/api/voice/transcribe`, {
-        method: "POST",
-        body: formData,
-      });
+        const res = await fetch(`${apiUrl}/api/voice/transcribe`, {
+          method: "POST",
+          body: formData,
+        });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.transcript && data.transcript.trim()) {
-          const spoken = data.transcript.trim();
-          setSpokenTranscript((prev) => {
-            const combined = `${prev} ${spoken}`.trim();
-            return Array.from(new Set(combined.split(/\s+/))).join(" ");
-          });
-          setTypedAnswer((prev) => {
-            const combined = `${prev} ${spoken}`.trim();
-            return Array.from(new Set(combined.split(/\s+/))).join(" ");
-          });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.transcript && data.transcript.trim()) {
+            return data.transcript.trim();
+          }
         }
+      } catch {} finally {
+        setIsTranscribing(false);
       }
-    } catch {} finally {
-      setIsTranscribing(false);
-    }
+      return "";
+    })();
+
+    pendingTranscriptRef.current = transcriptionPromise;
   };
 
   const startListening = async () => {
@@ -479,11 +509,12 @@ export default function VoiceInterviewModal({
     }
   };
 
-  const stopListening = async () => {
+  const stopListening = () => {
     shouldListenRef.current = false;
     setIsListening(false);
     setAudioVolume(0);
-    await sendAudioForTranscription();
+    // Fire transcription in background (non-blocking)
+    sendAudioForTranscription();
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -491,8 +522,12 @@ export default function VoiceInterviewModal({
     }
   };
 
-  // Start the entire Interview
+  // Start the entire Interview (with double-click guard)
+  const isStartingRef = useRef<boolean>(false);
   const handleStartInterview = async () => {
+    if (isStartingRef.current) return; // Prevent double-click
+    isStartingRef.current = true;
+
     setInterviewState("speaking");
     interviewStartTimeRef.current = Date.now();
     setCurrentRoundIndex(0);
@@ -500,17 +535,16 @@ export default function VoiceInterviewModal({
 
     // Greeting Narration
     await speak(`Hi ${childName || "there"}! Let's play a quick brain challenge.`);
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 200));
 
+    isStartingRef.current = false;
     // Play First Round
     playRound(0, BASELINE_ROUNDS);
   };
 
-  // Skip narration directly to answering mode
+  // Skip narration directly to answering mode (also stops all audio)
   const skipToAnswering = () => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    stopAllAudio();
     setInterviewState("answering");
     roundStartTimeRef.current = Date.now();
     startListening();
@@ -521,18 +555,29 @@ export default function VoiceInterviewModal({
     const round = roundsArray[index];
     if (!round) return;
 
+    // Increment generation so any stale SpeechRecognition callbacks are discarded
+    roundGenerationRef.current += 1;
+
+    // Fully stop recognition from previous round
+    shouldListenRef.current = false;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+    }
+
     setInterviewState("speaking");
     setSpokenTranscript("");
     setTypedAnswer("");
     recordedSamplesRef.current = [];
+    pendingTranscriptRef.current = null;
+
+    // Small delay to ensure recognition fully stops before TTS starts
+    await new Promise((r) => setTimeout(r, 100));
 
     // System speaks the intro story/numbers
     await speak(round.introNarration, 0.85);
-    await new Promise((r) => setTimeout(r, 300));
 
-    // System speaks the question
+    // System speaks the question (no artificial delay)
     await speak(round.questionSpoken, 0.88);
-    await new Promise((r) => setTimeout(r, 200));
 
     // Open listening mode
     setInterviewState("answering");
@@ -541,12 +586,21 @@ export default function VoiceInterviewModal({
   };
 
   // Evaluate current round and determine next question
+  const isSubmittingRoundRef = useRef<boolean>(false);
   const handleSubmitRoundAnswer = async () => {
-    await stopListening();
+    if (isSubmittingRoundRef.current) return; // Prevent double-click
+    isSubmittingRoundRef.current = true;
+
+    stopListening();
+    stopAllAudio(); // Kill any lingering TTS
     const latencyMs = Math.max(800, Date.now() - roundStartTimeRef.current);
     const round = interviewRounds[currentRoundIndex];
 
-    const childSpoken = `${spokenTranscript} ${typedAnswer}`.toLowerCase().trim();
+    // Use whatever SpeechRecognition already captured (instant, no server wait)
+    // The server transcription runs in background for supplemental data only
+    const extraTranscript = "";
+
+    const childSpoken = `${spokenTranscript} ${typedAnswer} ${extraTranscript}`.toLowerCase().trim();
     const cleanTokens = childSpoken
       .replace(/[^\w\s]/g, " ")
       .split(/\s+/)
@@ -586,13 +640,6 @@ export default function VoiceInterviewModal({
     const updatedResults = [...roundResults, resultRecord];
     setRoundResults(updatedResults);
 
-    // Provide quick positive verbal reinforcement
-    if (isCorrect) {
-      await speak("Great job! Let's keep going.");
-    } else {
-      await speak("Nice try! Moving to the next challenge.");
-    }
-
     const nextIndex = currentRoundIndex + 1;
 
     // Check if we need to insert an Adaptive Challenge (Round 4) based on performance
@@ -608,6 +655,7 @@ export default function VoiceInterviewModal({
         const expandedRounds = [...interviewRounds, nextAdaptiveRound];
         setInterviewRounds(expandedRounds);
         setCurrentRoundIndex(nextIndex);
+        isSubmittingRoundRef.current = false; // Reset guard before next round
         playRound(nextIndex, expandedRounds);
         return;
       } else if (avgAcc < 60) {
@@ -615,6 +663,7 @@ export default function VoiceInterviewModal({
         const expandedRounds = [...interviewRounds, SUPPORT_ROUND];
         setInterviewRounds(expandedRounds);
         setCurrentRoundIndex(nextIndex);
+        isSubmittingRoundRef.current = false; // Reset guard before next round
         playRound(nextIndex, expandedRounds);
         return;
       }
@@ -623,8 +672,10 @@ export default function VoiceInterviewModal({
     // If more rounds exist, proceed
     if (nextIndex < interviewRounds.length) {
       setCurrentRoundIndex(nextIndex);
+      isSubmittingRoundRef.current = false;
       playRound(nextIndex, interviewRounds);
     } else {
+      isSubmittingRoundRef.current = false;
       // Finalize and summarize interview
       finalizeInterview(updatedResults);
     }
@@ -882,22 +933,45 @@ export default function VoiceInterviewModal({
             </p>
 
             <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-              <button
-                onClick={skipToAnswering}
-                className="cd-btn cd-btn--primary"
-                style={{
-                  padding: "11px 26px",
-                  fontSize: "14px",
-                  fontWeight: 800,
-                  borderRadius: "14px",
-                  boxShadow: "0 6px 20px rgba(124, 58, 237, 0.25)",
-                  cursor: "pointer",
-                }}
-              >
-                I&apos;m Ready to Answer Now ➔
-              </button>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                {/* Stop TTS button */}
+                {isSpeaking && (
+                  <button
+                    onClick={stopAllAudio}
+                    style={{
+                      padding: "11px 22px",
+                      fontSize: "14px",
+                      fontWeight: 800,
+                      borderRadius: "14px",
+                      background: "#FEE2E2",
+                      color: "#DC2626",
+                      border: "2px solid #FECACA",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    ⏹ Stop Audio
+                  </button>
+                )}
+
+                {/* Skip to answering */}
+                <button
+                  onClick={skipToAnswering}
+                  className="cd-btn cd-btn--primary"
+                  style={{
+                    padding: "11px 26px",
+                    fontSize: "14px",
+                    fontWeight: 800,
+                    borderRadius: "14px",
+                    boxShadow: "0 6px 20px rgba(124, 58, 237, 0.25)",
+                    cursor: "pointer",
+                  }}
+                >
+                  I&apos;m Ready to Answer Now ➔
+                </button>
+              </div>
               <span style={{ fontSize: "12px", color: "#8E88A0" }}>
-                🔊 Listen to prompt or click to answer immediately
+                🔊 Listen to prompt or click to skip and answer immediately
               </span>
             </div>
           </div>
@@ -984,7 +1058,7 @@ export default function VoiceInterviewModal({
               </span>
             </div>
 
-            {/* Live Captured Answer Box */}
+            {/* Live Captured Answer Box — show unique words only */}
             <div
               style={{
                 background: "#FFFFFF",
@@ -1000,7 +1074,12 @@ export default function VoiceInterviewModal({
             >
               {spokenTranscript || typedAnswer ? (
                 <span style={{ fontSize: "16px", fontWeight: 800, color: "#4C1D95" }}>
-                  &ldquo;{[spokenTranscript, typedAnswer].filter(Boolean).join(" ")}&rdquo;
+                  &ldquo;{Array.from(new Set(
+                    [spokenTranscript, typedAnswer]
+                      .filter(Boolean)
+                      .join(" ")
+                      .split(/\s+/)
+                  )).join(" ")}&rdquo;
                 </span>
               ) : (
                 <span style={{ fontSize: "13px", color: "#9A94A9" }}>

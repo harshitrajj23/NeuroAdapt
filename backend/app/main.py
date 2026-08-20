@@ -6,6 +6,7 @@ Connects directly to Supabase PostgreSQL database.
 from fastapi import FastAPI, Depends, HTTPException, status, Response, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, List, Any
 from datetime import datetime
@@ -782,6 +783,7 @@ def get_child_detail(child_id: int, db: Session = Depends(get_db)):
             "created_at": plan.created_at.isoformat() if plan.created_at else None,
         } if plan else None,
         "session_timeline": timeline,
+        "cached_ai_insights": (child.profile_data or {}).get("cached_ai_insights"),
     }
 
 
@@ -848,15 +850,22 @@ def get_clinician_therapy_plans(clinician_id: int, db: Session = Depends(get_db)
     return result
 
 
+@app.get("/api/clinician/ai-insights/{child_id}")
 @app.post("/api/clinician/ai-insights/{child_id}")
-def generate_ai_clinical_insights(child_id: int, db: Session = Depends(get_db)):
+def generate_ai_clinical_insights(child_id: int, force_refresh: bool = False, db: Session = Depends(get_db)):
     """
-    AI Clinical Insights Engine (PRD Section 13) powered by Mistral AI.
-    Converts structured progress telemetry into readable, evidence-informed summaries for clinicians.
+    AI Clinical Insights Engine (PRD Section 13) powered by Mistral AI with persistent database caching.
+    Returns cached analysis instantly (<5ms) if available. When force_refresh=True, regenerates via Mistral AI.
     """
     child = db.query(Child).filter(Child.id == child_id).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
+
+    profile_dict = dict(child.profile_data or {})
+    cached = profile_dict.get("cached_ai_insights")
+
+    if cached and not force_refresh:
+        return cached
 
     sessions = db.query(SessionRecord).filter(SessionRecord.child_id == child_id).order_by(SessionRecord.started_at.desc()).all()
     session_ids = [s.id for s in sessions]
@@ -895,8 +904,8 @@ def generate_ai_clinical_insights(child_id: int, db: Session = Depends(get_db)):
                 "response_time_sec": round(p.response_time / 1000, 2)
             })
 
-    condition = (child.profile_data or {}).get("condition", "Cognitive Retraining")
-    baseline = (child.profile_data or {}).get("baseline_score", 70)
+    condition = profile_dict.get("condition", "Cognitive Retraining")
+    baseline = profile_dict.get("baseline_score", 70)
 
     insights = generate_mistral_clinical_insights(
         child_name=child.name,
@@ -910,7 +919,16 @@ def generate_ai_clinical_insights(child_id: int, db: Session = Depends(get_db)):
         recent_sessions=recent_sample
     )
 
+    if isinstance(insights, dict):
+        insights["generated_at"] = datetime.utcnow().isoformat()
+        insights["sessions_at_generation"] = len(sessions)
+        profile_dict["cached_ai_insights"] = insights
+        child.profile_data = profile_dict
+        flag_modified(child, "profile_data")
+        db.commit()
+
     return insights
+
 
 
 @app.get("/api/clinician/reports/{child_id}/pdf")
@@ -1415,10 +1433,12 @@ async def transcribe_voice_audio(file: UploadFile = File(...)):
 def stream_text_to_speech(text: str = Query(..., description="Text to synthesize to speech")):
     """
     Synthesize text into natural spoken audio stream (MP3).
+    Uses in-memory cache to avoid regenerating audio for repeated phrases.
     Ensures 100% audio playback across all browsers (including Brave, Chrome, Safari, Firefox)
     where client-side Web Speech API is blocked or fingerprint-protected.
     """
     import io
+    import hashlib
     from fastapi.responses import Response
     from gtts import gTTS
 
@@ -1426,13 +1446,34 @@ def stream_text_to_speech(text: str = Query(..., description="Text to synthesize
     if not clean_text:
         return Response(content=b"", media_type="audio/mpeg")
 
+    # In-memory TTS cache to avoid redundant gTTS network calls
+    cache_key = hashlib.md5(clean_text.encode()).hexdigest()
+    if not hasattr(app, "_tts_cache"):
+        app._tts_cache = {}
+
+    if cache_key in app._tts_cache:
+        return Response(
+            content=app._tts_cache[cache_key],
+            media_type="audio/mpeg",
+            headers={
+                "Cache-Control": "public, max-age=3600",
+                "Content-Type": "audio/mpeg",
+            }
+        )
+
     try:
         tts = gTTS(text=clean_text, lang="en", slow=False)
         fp = io.BytesIO()
         tts.write_to_fp(fp)
         fp.seek(0)
+        audio_bytes = fp.getvalue()
+
+        # Cache the result (limit cache to 200 entries to prevent memory bloat)
+        if len(app._tts_cache) < 200:
+            app._tts_cache[cache_key] = audio_bytes
+
         return Response(
-            content=fp.getvalue(),
+            content=audio_bytes,
             media_type="audio/mpeg",
             headers={
                 "Cache-Control": "public, max-age=3600",
@@ -1441,6 +1482,7 @@ def stream_text_to_speech(text: str = Query(..., description="Text to synthesize
         )
     except Exception as e:
         return Response(content=b"", media_type="audio/mpeg", status_code=500)
+
 
 
 
@@ -1777,13 +1819,30 @@ def generate_telegram_parent_draft(child_id: int, clinician_id: Optional[int] = 
         if clin:
             clinician_name = clin.name
 
-    # Aggregate cognitive domain telemetry
-    domain_stats: Dict[str, Any] = {
-        "attention": {"avg_accuracy": 78, "max_difficulty": 3},
-        "memory": {"avg_accuracy": 84, "max_difficulty": 3},
-        "reasoning": {"avg_accuracy": 91, "max_difficulty": 4},
-        "problem_solving": {"avg_accuracy": 80, "max_difficulty": 3},
-    }
+    # Aggregate 100% real cognitive domain telemetry from database
+    domain_stats: Dict[str, Any] = {}
+    for d in ["attention", "memory", "reasoning", "problem_solving"]:
+        d_sessions = (
+            db.query(Performance, SessionRecord, Exercise)
+            .join(SessionRecord, Performance.session_id == SessionRecord.id)
+            .join(Exercise, SessionRecord.exercise_id == Exercise.id)
+            .filter(SessionRecord.child_id == child_id, Exercise.domain == d)
+            .all()
+        )
+        if d_sessions:
+            accs = [p.accuracy for p, s, e in d_sessions if p.accuracy is not None]
+            diffs = [p.difficulty for p, s, e in d_sessions if p.difficulty is not None]
+            domain_stats[d] = {
+                "sessions_count": len(d_sessions),
+                "avg_accuracy": round(sum(accs) / len(accs), 1) if accs else 0.0,
+                "max_difficulty": max(diffs, default=1),
+            }
+        else:
+            domain_stats[d] = {
+                "sessions_count": 0,
+                "avg_accuracy": 0.0,
+                "max_difficulty": 1,
+            }
 
     recent_sessions_list = []
     try:
@@ -1797,23 +1856,12 @@ def generate_telegram_parent_draft(child_id: int, clinician_id: Optional[int] = 
             .all()
         )
 
-        if performances:
-            by_domain: Dict[str, List[float]] = {}
-            for perf, sess, ex in performances:
-                if ex and ex.domain:
-                    by_domain.setdefault(ex.domain, []).append(float(perf.accuracy or 0.0))
-                recent_sessions_list.append({
-                    "exercise_name": ex.name if ex else "Exercise",
-                    "accuracy": perf.accuracy,
-                    "created_at": sess.started_at.isoformat() if sess.started_at else None,
-                })
-
-            for d, accs in by_domain.items():
-                if accs:
-                    domain_stats[d] = {
-                        "avg_accuracy": round(sum(accs) / len(accs), 1),
-                        "max_difficulty": 3,
-                    }
+        for perf, sess, ex in performances:
+            recent_sessions_list.append({
+                "exercise_name": ex.name if ex else "Exercise",
+                "accuracy": perf.accuracy,
+                "created_at": sess.started_at.isoformat() if sess.started_at else None,
+            })
     except Exception as err:
         print("Telemetry query notice:", err)
 

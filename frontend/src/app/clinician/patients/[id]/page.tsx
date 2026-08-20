@@ -24,6 +24,8 @@ import {
   ClipboardList,
   Download,
   FileText,
+  RotateCcw,
+  RefreshCw,
 } from "lucide-react";
 import { useClinicianContext } from "../../layout";
 import VoiceInterviewSummaryCard, { VoiceInterviewRecord } from "../../components/VoiceInterviewSummaryCard";
@@ -53,6 +55,7 @@ interface ChildDetailResponse {
     max_difficulty: number;
     accuracies_history: number[];
   }>;
+  cached_ai_insights?: AIInsights | null;
   therapy_plan: {
     id: number;
     target_domains: string[];
@@ -84,6 +87,8 @@ interface AIInsights {
   difficulty_recommendation: string;
   fatigue_analysis: string;
   clinical_guidance: string;
+  generated_at?: string;
+  sessions_at_generation?: number;
 }
 
 interface ExerciseOption {
@@ -151,6 +156,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
 
       if (childRes) {
         setData(childRes);
+        if (childRes.cached_ai_insights) {
+          setAiInsights(childRes.cached_ai_insights);
+        }
         if (childRes.therapy_plan) {
           setPlanDomains(childRes.therapy_plan.target_domains || ["attention", "memory", "reasoning"]);
           setMinDiff(childRes.therapy_plan.min_difficulty || 1);
@@ -178,10 +186,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
     fetchChildData();
   }, [childId, apiUrl]);
 
-  const handleGenerateAI = async () => {
+  const handleGenerateAI = async (force: boolean = false) => {
     setAiLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/api/clinician/ai-insights/${childId}`, {
+      const res = await fetch(`${apiUrl}/api/clinician/ai-insights/${childId}?force_refresh=${force ? "true" : "false"}`, {
         method: "POST",
       });
       if (res.ok) {
@@ -345,12 +353,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             <Plus className="h-4 w-4" /> Assign Exercise
           </button>
           <button
-            onClick={handleGenerateAI}
+            onClick={() => handleGenerateAI(true)}
             disabled={aiLoading}
             className="cl-table-action-btn"
-            style={{ padding: "8px 16px", background: "#FAF8FF", borderColor: "#DDD6FE" }}
+            style={{ padding: "8px 16px", background: "#FAF8FF", borderColor: "#DDD6FE", display: "flex", alignItems: "center", gap: "6px" }}
           >
-            <Sparkles className="h-4 w-4" /> {aiLoading ? "Generating AI Summary..." : "Generate AI Insights"}
+            <RotateCcw className={`h-4 w-4 ${aiLoading ? "animate-spin" : ""}`} />
+            {aiLoading ? "Regenerating..." : (aiInsights ? "🔄 Regenerate AI Analysis" : "Generate AI Insights")}
           </button>
           <button onClick={() => setIsPlanModalOpen(true)} className="cl-table-action-btn" style={{ padding: "8px 16px" }}>
             <Edit3 className="h-4 w-4" /> Therapy Plan
@@ -425,15 +434,40 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
       {/* AI Clinician Insights Card (PRD Section 13 - Mistral Assisted) */}
       {aiInsights && (
         <div className="cl-ai-insights-box">
-          <div className="cl-ai-header">
-            <div className="cl-ai-title-group">
+          <div className="cl-ai-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+            <div className="cl-ai-title-group" style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <span className="cl-ai-badge">
                 <Sparkles className="h-3.5 w-3.5" /> AI Clinician Insights Engine
               </span>
               <span style={{ fontSize: "12px", color: "#9A94A9" }}>
                 {aiInsights.ai_engine || "Mistral AI Assisted"}
               </span>
+              {aiInsights.generated_at && (
+                <span style={{ fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "10px", background: "#ECFDF5", color: "#065F46", border: "1px solid #A7F3D0" }}>
+                  ⚡ Instant Cache ({new Date(aiInsights.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                </span>
+              )}
             </div>
+            <button
+              onClick={() => handleGenerateAI(true)}
+              disabled={aiLoading}
+              className="cl-table-action-btn"
+              style={{
+                fontSize: "12px",
+                padding: "6px 12px",
+                borderRadius: "10px",
+                background: "#FFFFFF",
+                borderColor: "#C4B5FD",
+                color: "#6D28D9",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+              }}
+            >
+              <RotateCcw className={`h-3.5 w-3.5 ${aiLoading ? "animate-spin" : ""}`} />
+              {aiLoading ? "Regenerating..." : "🔄 Regenerate AI Analysis"}
+            </button>
           </div>
 
           <p className="cl-ai-summary-text">{aiInsights.summary}</p>

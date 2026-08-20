@@ -58,17 +58,41 @@ def generate_parent_update_prompt(
     recent_sessions: List[Dict[str, Any]],
 ) -> str:
     """
-    Uses Mistral AI to compose an empathetic, encouraging, jargon-free Telegram update for parents.
+    Uses Mistral AI to compose an empathetic, encouraging, jargon-free Telegram update for parents
+    based strictly on 100% real telemetry from the database.
     """
+    stats_summary = []
+    active_domains_text = []
+    for d, s in domain_stats.items():
+        count = s.get("sessions_count", 0)
+        acc = s.get("avg_accuracy", 0.0)
+        lvl = s.get("max_difficulty", 1)
+        if count > 0:
+            stats_summary.append(f"- {d.replace('_', ' ').title()}: {acc}% accuracy ({count} sessions completed, Level {lvl})")
+            active_domains_text.append(f"{d.replace('_', ' ').title()} ({acc}%)")
+        else:
+            stats_summary.append(f"- {d.replace('_', ' ').title()}: 0 sessions completed (Not yet started / Queued)")
+
     if not MISTRAL_API_KEY:
-        # Fallback template if key is missing
+        # Fallback template strictly based on real data
+        active_lines = []
+        if domain_stats.get("memory", {}).get("sessions_count", 0) > 0:
+            active_lines.append(f"🧠 *Memory:* {domain_stats['memory']['avg_accuracy']}%")
+        if domain_stats.get("attention", {}).get("sessions_count", 0) > 0:
+            active_lines.append(f"🎯 *Attention:* {domain_stats['attention']['avg_accuracy']}%")
+        if domain_stats.get("reasoning", {}).get("sessions_count", 0) > 0:
+            active_lines.append(f"💡 *Reasoning:* {domain_stats['reasoning']['avg_accuracy']}%")
+        if domain_stats.get("problem_solving", {}).get("sessions_count", 0) > 0:
+            active_lines.append(f"🧩 *Problem-Solving:* {domain_stats['problem_solving']['avg_accuracy']}%")
+
+        domain_block = "\n".join(active_lines) if active_lines else "📊 *Initial baseline assessments in progress*"
+
         return (
-            f"👋 *Hello from NeuroAdapt!* (Dr. {clinician_name})\n\n"
-            f"Here is *{child_name}*'s weekly cognitive rehabilitation update:\n\n"
-            f"🧠 *Memory Recall:* {domain_stats.get('memory', {}).get('avg_accuracy', 82)}% accuracy\n"
-            f"🎯 *Attention Span:* {domain_stats.get('attention', {}).get('avg_accuracy', 75)}%\n"
-            f"💡 *Reasoning:* {domain_stats.get('reasoning', {}).get('avg_accuracy', 88)}%\n\n"
-            f"🌟 *Doctor's Note:* {child_name} has shown steady focus this week! Please encourage 15 minutes of home practice again on Friday."
+            f"👋 *Weekly Update for {child_name} ({age} yrs)* — From Dr. {clinician_name}\n\n"
+            f"**Dear Parents,**\n"
+            f"{child_name} completed {len(recent_sessions)} rehabilitation sessions this week.\n\n"
+            f"{domain_block}\n\n"
+            f"🌟 *Doctor's Note:* Keep celebrating every effort at home! Consistency is key to steady neurocognitive recovery."
         )
 
     try:
@@ -77,16 +101,14 @@ def generate_parent_update_prompt(
             "Content-Type": "application/json",
         }
 
-        stats_summary = []
-        for d, s in domain_stats.items():
-            stats_summary.append(f"{d.capitalize()}: {s.get('avg_accuracy', 0)}% accuracy (Level {s.get('max_difficulty', 1)})")
-
         system_instruction = (
             "You are an empathetic pediatric cognitive rehabilitation AI assistant drafting a weekly progress "
-            "SMS/Telegram update to a child's parents on behalf of their supervising clinician. "
-            "Tone: Warm, encouraging, clear, jargon-free, professional yet compassionate. "
-            "Include key milestones, positive reinforcement, domain scores (Memory, Attention, Reasoning), "
-            "and 1-2 actionable home tips. Format with clean emojis and bold markdown. Keep under 160 words."
+            "Telegram update to a child's parents on behalf of their supervising clinician. "
+            "CRITICAL ACCURACY RULES:\n"
+            "1. ONLY quote the exact domain accuracies and session numbers provided below in 'Cognitive Metrics'.\n"
+            "2. NEVER invent, hallucinate, or assume percentages. If a domain has 0 sessions or 0% accuracy (e.g., Reasoning or Attention), do NOT claim they scored high in it — state that it has not been started yet or is scheduled for next week.\n"
+            "3. Focus positive reinforcement on the domains that have actual completed sessions.\n"
+            "Tone: Warm, encouraging, clear, jargon-free, professional yet compassionate. Format with clean emojis and bold markdown. Keep under 150 words."
         )
 
         user_content = f"""
@@ -94,11 +116,11 @@ Child Name: {child_name}
 Age: {age}
 Condition: {condition}
 Supervising Clinician: Dr. {clinician_name}
-Cognitive Metrics:
+Cognitive Metrics (Actual Telemetry):
 {chr(10).join(stats_summary)}
 Total Completed Sessions: {len(recent_sessions)}
 
-Please generate a ready-to-send Telegram message for the parents.
+Please generate the ready-to-send Telegram message for the parents based ONLY on the above actual telemetry.
 """
 
         body = {
@@ -107,7 +129,7 @@ Please generate a ready-to-send Telegram message for the parents.
                 {"role": "system", "content": system_instruction},
                 {"role": "user", "content": user_content},
             ],
-            "temperature": 0.5,
+            "temperature": 0.3,
             "max_tokens": 300,
         }
 
@@ -119,11 +141,18 @@ Please generate a ready-to-send Telegram message for the parents.
             raise Exception(f"Mistral API returned {res.status_code}")
     except Exception as e:
         print("Mistral Telegram prompt fallback notice:", e)
+        active_lines = []
+        for d in ["memory", "attention", "reasoning", "problem_solving"]:
+            s = domain_stats.get(d, {})
+            if s.get("sessions_count", 0) > 0:
+                active_lines.append(f"• *{d.replace('_', ' ').title()}:* {s.get('avg_accuracy', 0)}%")
+        domain_block = "\n".join(active_lines) if active_lines else "• *Initial baseline assessments in progress*"
+
         return (
-            f"👋 *Hello from NeuroAdapt!* (Dr. {clinician_name})\n\n"
-            f"Here is *{child_name}*'s weekly cognitive rehabilitation update:\n\n"
-            f"🧠 *Memory Recall:* {domain_stats.get('memory', {}).get('avg_accuracy', 82)}%\n"
-            f"🎯 *Attention Span:* {domain_stats.get('attention', {}).get('avg_accuracy', 75)}%\n"
-            f"💡 *Reasoning:* {domain_stats.get('reasoning', {}).get('avg_accuracy', 88)}%\n\n"
-            f"🌟 *Doctor's Note:* {child_name} is making great strides! Keep up the daily routine and celebrate small wins at home."
+            f"👋 *Weekly Update for {child_name} ({age} yrs)* — From Dr. {clinician_name}\n\n"
+            f"**Dear Parents,**\n"
+            f"{child_name} completed {len(recent_sessions)} therapy sessions this week!\n\n"
+            f"{domain_block}\n\n"
+            f"🌟 *Doctor's Note:* Great effort this week. Let's keep up the daily routine at home!"
         )
+
