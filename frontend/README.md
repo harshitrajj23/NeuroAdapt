@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧠 NeuroAdapt Frontend
 
-## Getting Started
+The client-side interface for **NeuroAdapt** built with **Next.js 16 (Turbopack)**, **React 19**, and **TypeScript**.
 
-First, run the development server:
+For the complete platform architecture, AI/ML specifications, and system design, please see the [Root README](../README.md).
 
+---
+
+## 🚀 Getting Started
+
+### 1. Install Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure Environment
+Create `.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Run Development Server
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 📁 Key Routes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `/` — Modern Animated Landing Page with Neural Particle Canvas
+- `/auth` — Dual Authentication Portal (Child / Clinician)
+- `/child` — Child Gamified Tele-Rehabilitation Dashboard
+- `/child/exercises` — Cognitive Retraining Games (Attention, Memory, Reasoning, Problem Solving)
+- `/child/progress` — Child Performance & Streak Analytics
+- `/child/achievements` — Badges, XP & Milestones
+- `/child/settings` — Accessibility Settings (Dark/Light Mode, Font Scaling)
+- `/clinician` — Clinician Cohort Telemetry Dashboard
+- `/clinician/patients` — Patient Registry & Search
+- `/clinician/patients/[id]` — Individual Patient Chart, AI Voice Session Summary, and Parent Telegram Dispatcher
+- `/clinician/plans` — Therapy Prescription Management
+- `/clinician/analytics` — Cross-Cohort Accuracy & Latency Analytics
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🛠️ Build & Verification
+```bash
+npm run build
+```
