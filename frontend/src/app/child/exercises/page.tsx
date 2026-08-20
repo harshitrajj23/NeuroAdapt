@@ -56,9 +56,15 @@ export default function ExercisesPage() {
         const dashData = await dashRes.json();
         if (dashData.domain_stats) {
           const lvls: Record<string, number> = {};
-          dashData.domain_stats.forEach((d: any) => {
-            lvls[d.domain] = d.level || 1;
-          });
+          if (Array.isArray(dashData.domain_stats)) {
+            dashData.domain_stats.forEach((d: any) => {
+              lvls[d.domain] = d.level || d.max_difficulty || 1;
+            });
+          } else if (typeof dashData.domain_stats === "object") {
+            Object.entries(dashData.domain_stats).forEach(([dom, s]: [string, any]) => {
+              lvls[dom] = s.level || s.max_difficulty || 1;
+            });
+          }
           setDomainLevels(lvls);
         }
       }

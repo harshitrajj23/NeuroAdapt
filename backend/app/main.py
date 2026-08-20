@@ -258,7 +258,7 @@ def get_child_dashboard(user_id: int, db: Session = Depends(get_db)):
             avg_accuracy = round(sum(p.accuracy for p in d_tuples) / len(d_tuples), 1) if d_tuples else 0
             avg_score = round(sum(p.score for p in d_tuples) / len(d_tuples)) if d_tuples else 0
             max_difficulty = max((p.difficulty for p in d_tuples), default=1)
-            level = max(1, max_difficulty // 2) if d_tuples else 0
+            level = max_difficulty if d_tuples else 1
             progress = round(avg_accuracy) if d_tuples else 0
             domain_stats[domain_name] = {
                 "sessions": len(d_tuples),
@@ -271,7 +271,7 @@ def get_child_dashboard(user_id: int, db: Session = Depends(get_db)):
         else:
             domain_stats[domain_name] = {
                 "sessions": 0, "accuracy": 0, "avg_score": 0,
-                "level": 0, "progress": 0, "max_difficulty": 1,
+                "level": 1, "progress": 0, "max_difficulty": 1,
             }
 
     # Overall stats
