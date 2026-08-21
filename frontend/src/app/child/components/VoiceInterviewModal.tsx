@@ -42,92 +42,377 @@ interface InterviewRound {
   complexity: string;
 }
 
-// Structured Assessment Question Bank
-const BASELINE_ROUNDS: InterviewRound[] = [
-  {
-    id: 1,
-    domain: "memory",
-    domainTitle: "Verbal Working Memory",
-    domainIcon: "🧠",
-    introNarration: "I'm going to tell you three things: dog, bicycle, apple. Remember them.",
-    questionSpoken: "What were the three things?",
-    expectedTokens: ["dog", "bicycle", "apple"],
-    quickChips: ["🐶 Dog", "🚲 Bicycle", "🍎 Apple", "🐱 Cat"],
-    complexity: "3 items · Baseline",
-  },
-  {
-    id: 2,
-    domain: "attention",
-    domainTitle: "Auditory Selective Attention",
-    domainIcon: "🎯",
-    introNarration: "I'll say some numbers. Tell me only the numbers you hear twice: 3… 7… 4… 7… 9…",
-    questionSpoken: "Which number did you hear twice?",
-    expectedTokens: ["7", "seven"],
-    quickChips: ["3", "7", "4", "9"],
-    complexity: "5-digit sequence · Vigilance",
-  },
-  {
-    id: 3,
-    domain: "reasoning",
-    domainTitle: "Working Logic & Arithmetic",
-    domainIcon: "💡",
-    introNarration: "Listen to this story: Ravi has 3 apples and gives 1 to his friend.",
-    questionSpoken: "How many apples does Ravi have now?",
-    expectedTokens: ["2", "two"],
-    quickChips: ["1", "2", "3", "4"],
-    complexity: "Single-step deduction",
-  },
-];
-
-// Adaptive Higher Complexity Challenges (if >= 80% accuracy)
-const ADVANCED_ROUNDS: Record<string, InterviewRound> = {
-  memory: {
-    id: 4,
-    domain: "memory",
-    domainTitle: "Advanced Working Memory",
-    domainIcon: "🧠",
-    introNarration: "Great job! Let's level up: tiger, rocket, guitar, moon, train. Remember them.",
-    questionSpoken: "Tell me all the items you remember!",
-    expectedTokens: ["tiger", "rocket", "guitar", "moon", "train"],
-    quickChips: ["🐯 Tiger", "🚀 Rocket", "🎸 Guitar", "🌙 Moon", "🚂 Train"],
-    complexity: "5 items · High Span",
-  },
-  attention: {
-    id: 5,
-    domain: "attention",
-    domainTitle: "Dual Target Attention",
-    domainIcon: "🎯",
-    introNarration: "Listen carefully to this sequence: 6… 2… 8… 2… 5… 8… 1…",
-    questionSpoken: "Which numbers appeared two times?",
-    expectedTokens: ["2", "two", "8", "eight"],
-    quickChips: ["2 and 8", "2", "8", "6", "5"],
-    complexity: "Dual repeated targets",
-  },
-  reasoning: {
-    id: 6,
-    domain: "reasoning",
-    domainTitle: "Multi-Step Logic",
-    domainIcon: "💡",
-    introNarration: "A toy train has 5 blue cars. The engineer adds 3 red cars and removes 1 blue car.",
-    questionSpoken: "How many cars are on the train in total?",
-    expectedTokens: ["7", "seven"],
-    quickChips: ["6", "7", "8", "9"],
-    complexity: "2-step arithmetic logic",
-  },
+// Comprehensive Multi-Tier Cognitive Question Pools
+export const MEMORY_QUESTION_POOLS: Record<"baseline" | "intermediate" | "advanced" | "support", InterviewRound[]> = {
+  baseline: [
+    {
+      id: 101,
+      domain: "memory",
+      domainTitle: "Verbal Working Memory",
+      domainIcon: "🧠",
+      introNarration: "I'm going to tell you three things: dog, bicycle, apple. Remember them.",
+      questionSpoken: "What were the three things?",
+      expectedTokens: ["dog", "bicycle", "apple"],
+      quickChips: ["🐶 Dog", "🚲 Bicycle", "🍎 Apple", "🐱 Cat"],
+      complexity: "3 items · Baseline",
+    },
+    {
+      id: 102,
+      domain: "memory",
+      domainTitle: "Verbal Working Memory",
+      domainIcon: "🧠",
+      introNarration: "Listen carefully to these three words: sun, guitar, tiger. Keep them in mind.",
+      questionSpoken: "What were the three words?",
+      expectedTokens: ["sun", "guitar", "tiger"],
+      quickChips: ["☀️ Sun", "🎸 Guitar", "🐯 Tiger", "🌙 Moon"],
+      complexity: "3 items · Baseline",
+    },
+    {
+      id: 103,
+      domain: "memory",
+      domainTitle: "Verbal Working Memory",
+      domainIcon: "🧠",
+      introNarration: "Remember these three items: train, flower, dolphin. Got them?",
+      questionSpoken: "Tell me the three items!",
+      expectedTokens: ["train", "flower", "dolphin"],
+      quickChips: ["🚂 Train", "🌸 Flower", "🐬 Dolphin", "🚀 Rocket"],
+      complexity: "3 items · Baseline",
+    },
+    {
+      id: 104,
+      domain: "memory",
+      domainTitle: "Verbal Working Memory",
+      domainIcon: "🧠",
+      introNarration: "Here are three objects: book, castle, eagle. Lock them in your memory.",
+      questionSpoken: "Which three objects did I say?",
+      expectedTokens: ["book", "castle", "eagle"],
+      quickChips: ["📖 Book", "🏰 Castle", "🦅 Eagle", "⚽ Ball"],
+      complexity: "3 items · Baseline",
+    },
+    {
+      id: 105,
+      domain: "memory",
+      domainTitle: "Verbal Working Memory",
+      domainIcon: "🧠",
+      introNarration: "Remember these three words: rainbow, dragon, piano.",
+      questionSpoken: "What were the three words?",
+      expectedTokens: ["rainbow", "dragon", "piano"],
+      quickChips: ["🌈 Rainbow", "🐉 Dragon", "🎹 Piano", "⭐ Star"],
+      complexity: "3 items · Baseline",
+    },
+  ],
+  intermediate: [
+    {
+      id: 106,
+      domain: "memory",
+      domainTitle: "Expanded Memory Span",
+      domainIcon: "🧠",
+      introNarration: "Listen to four things: rocket, mango, rabbit, drum. Remember them.",
+      questionSpoken: "What were the four things?",
+      expectedTokens: ["rocket", "mango", "rabbit", "drum"],
+      quickChips: ["🚀 Rocket", "🥭 Mango", "🐰 Rabbit", "🥁 Drum", "🦁 Lion"],
+      complexity: "4 items · Intermediate Span",
+    },
+    {
+      id: 107,
+      domain: "memory",
+      domainTitle: "Expanded Memory Span",
+      domainIcon: "🧠",
+      introNarration: "Remember these four words: planet, diamond, lion, whistle.",
+      questionSpoken: "Tell me all four words!",
+      expectedTokens: ["planet", "diamond", "lion", "whistle"],
+      quickChips: ["🪐 Planet", "💎 Diamond", "🦁 Lion", "📢 Whistle", "🚗 Car"],
+      complexity: "4 items · Intermediate Span",
+    },
+  ],
+  advanced: [
+    {
+      id: 108,
+      domain: "memory",
+      domainTitle: "High Span Working Memory",
+      domainIcon: "🧠",
+      introNarration: "Awesome job! Let's level up: tiger, rocket, guitar, moon, train. Remember them.",
+      questionSpoken: "Tell me all the items you remember!",
+      expectedTokens: ["tiger", "rocket", "guitar", "moon", "train"],
+      quickChips: ["🐯 Tiger", "🚀 Rocket", "🎸 Guitar", "🌙 Moon", "🚂 Train"],
+      complexity: "5 items · High Span Tier",
+    },
+    {
+      id: 109,
+      domain: "memory",
+      domainTitle: "High Span Working Memory",
+      domainIcon: "🧠",
+      introNarration: "Super memory challenge: galaxy, telescope, dolphin, crown, crystal.",
+      questionSpoken: "Which five words did I speak?",
+      expectedTokens: ["galaxy", "telescope", "dolphin", "crown", "crystal"],
+      quickChips: ["🌌 Galaxy", "🔭 Telescope", "🐬 Dolphin", "👑 Crown", "💎 Crystal"],
+      complexity: "5 items · High Span Tier",
+    },
+  ],
+  support: [
+    {
+      id: 110,
+      domain: "memory",
+      domainTitle: "Foundational Memory Support",
+      domainIcon: "🧠",
+      introNarration: "Let's do a gentle challenge: star and boat. Remember them.",
+      questionSpoken: "What were the two things?",
+      expectedTokens: ["star", "boat"],
+      quickChips: ["⭐ Star", "⛵ Boat", "🚗 Car"],
+      complexity: "2 items · Foundational Tier",
+    },
+    {
+      id: 111,
+      domain: "memory",
+      domainTitle: "Foundational Memory Support",
+      domainIcon: "🧠",
+      introNarration: "Listen to these two words: tree and bird. Remember them.",
+      questionSpoken: "What were the two words?",
+      expectedTokens: ["tree", "bird"],
+      quickChips: ["🌳 Tree", "🐦 Bird", "🐱 Cat"],
+      complexity: "2 items · Foundational Tier",
+    },
+  ],
 };
 
-// Adaptive Support Challenge (if < 60% accuracy)
-const SUPPORT_ROUND: InterviewRound = {
-  id: 4,
-  domain: "memory",
-  domainTitle: "Foundational Memory Support",
-  domainIcon: "🧠",
-  introNarration: "Let's do a gentle challenge: star and boat. Remember them.",
-  questionSpoken: "What were the two things?",
-  expectedTokens: ["star", "boat"],
-  quickChips: ["⭐ Star", "⛵ Boat", "🚗 Car"],
-  complexity: "2 items · Foundational",
+export const ATTENTION_QUESTION_POOLS: Record<"baseline" | "intermediate" | "advanced" | "support", InterviewRound[]> = {
+  baseline: [
+    {
+      id: 201,
+      domain: "attention",
+      domainTitle: "Auditory Selective Attention",
+      domainIcon: "🎯",
+      introNarration: "I'll say some numbers. Tell me only the number you hear twice: 3… 7… 4… 7… 9…",
+      questionSpoken: "Which number did you hear twice?",
+      expectedTokens: ["7", "seven"],
+      quickChips: ["3", "7", "4", "9"],
+      complexity: "5-digit sequence · Vigilance",
+    },
+    {
+      id: 202,
+      domain: "attention",
+      domainTitle: "Auditory Selective Attention",
+      domainIcon: "🎯",
+      introNarration: "Listen to this sequence: 5… 2… 8… 2… 6… Focus on repeats.",
+      questionSpoken: "Which number repeated?",
+      expectedTokens: ["2", "two"],
+      quickChips: ["5", "2", "8", "6"],
+      complexity: "5-digit sequence · Vigilance",
+    },
+    {
+      id: 203,
+      domain: "attention",
+      domainTitle: "Auditory Selective Attention",
+      domainIcon: "🎯",
+      introNarration: "Listen carefully: 1… 9… 4… 9… 3…",
+      questionSpoken: "Which number was spoken twice?",
+      expectedTokens: ["9", "nine"],
+      quickChips: ["1", "9", "4", "3"],
+      complexity: "5-digit sequence · Vigilance",
+    },
+    {
+      id: 204,
+      domain: "attention",
+      domainTitle: "Auditory Selective Attention",
+      domainIcon: "🎯",
+      introNarration: "Track these numbers: 6… 3… 8… 3… 5…",
+      questionSpoken: "Which number repeated two times?",
+      expectedTokens: ["3", "three"],
+      quickChips: ["6", "3", "8", "5"],
+      complexity: "5-digit sequence · Vigilance",
+    },
+  ],
+  intermediate: [
+    {
+      id: 205,
+      domain: "attention",
+      domainTitle: "Auditory Selective Attention",
+      domainIcon: "🎯",
+      introNarration: "Longer sequence incoming: 8… 4… 1… 7… 4… 2…",
+      questionSpoken: "Which number appeared twice?",
+      expectedTokens: ["4", "four"],
+      quickChips: ["8", "4", "1", "7", "2"],
+      complexity: "6-digit sequence · Sustained",
+    },
+    {
+      id: 206,
+      domain: "attention",
+      domainTitle: "Auditory Selective Attention",
+      domainIcon: "🎯",
+      introNarration: "Listen closely: 9… 5… 3… 6… 5… 8…",
+      questionSpoken: "Which number did you hear two times?",
+      expectedTokens: ["5", "five"],
+      quickChips: ["9", "5", "3", "6", "8"],
+      complexity: "6-digit sequence · Sustained",
+    },
+  ],
+  advanced: [
+    {
+      id: 207,
+      domain: "attention",
+      domainTitle: "Dual Target Attention",
+      domainIcon: "🎯",
+      introNarration: "Listen carefully to this sequence: 6… 2… 8… 2… 5… 8… 1…",
+      questionSpoken: "Which numbers appeared two times?",
+      expectedTokens: ["2", "two", "8", "eight"],
+      quickChips: ["2 and 8", "2", "8", "6", "5"],
+      complexity: "Dual repeated targets · High Load",
+    },
+    {
+      id: 208,
+      domain: "attention",
+      domainTitle: "Dual Target Attention",
+      domainIcon: "🎯",
+      introNarration: "Focus on double repeats: 4… 7… 3… 7… 9… 4… 2…",
+      questionSpoken: "Which two numbers repeated?",
+      expectedTokens: ["4", "four", "7", "seven"],
+      quickChips: ["4 and 7", "4", "7", "3", "9"],
+      complexity: "Dual repeated targets · High Load",
+    },
+  ],
+  support: [
+    {
+      id: 209,
+      domain: "attention",
+      domainTitle: "Foundational Attention",
+      domainIcon: "🎯",
+      introNarration: "Short sequence: 4… 1… 4… 6…",
+      questionSpoken: "Which number did you hear twice?",
+      expectedTokens: ["4", "four"],
+      quickChips: ["4", "1", "6"],
+      complexity: "4-digit sequence · Foundational",
+    },
+  ],
 };
+
+export const REASONING_QUESTION_POOLS: Record<"baseline" | "intermediate" | "advanced" | "support", InterviewRound[]> = {
+  baseline: [
+    {
+      id: 301,
+      domain: "reasoning",
+      domainTitle: "Working Logic & Arithmetic",
+      domainIcon: "💡",
+      introNarration: "Listen to this story: Ravi has 3 apples and gives 1 to his friend.",
+      questionSpoken: "How many apples does Ravi have now?",
+      expectedTokens: ["2", "two"],
+      quickChips: ["1", "2", "3", "4"],
+      complexity: "Single-step deduction",
+    },
+    {
+      id: 302,
+      domain: "reasoning",
+      domainTitle: "Working Logic & Arithmetic",
+      domainIcon: "💡",
+      introNarration: "A party basket has 4 balloons and 2 pop with a loud bang.",
+      questionSpoken: "How many balloons are left in the basket?",
+      expectedTokens: ["2", "two"],
+      quickChips: ["1", "2", "3", "4"],
+      complexity: "Single-step deduction",
+    },
+    {
+      id: 303,
+      domain: "reasoning",
+      domainTitle: "Working Logic & Arithmetic",
+      domainIcon: "💡",
+      introNarration: "Maya picked 5 blue flowers and gave 2 to her mother.",
+      questionSpoken: "How many flowers does Maya have now?",
+      expectedTokens: ["3", "three"],
+      quickChips: ["2", "3", "4", "5"],
+      complexity: "Single-step deduction",
+    },
+    {
+      id: 304,
+      domain: "reasoning",
+      domainTitle: "Working Logic & Arithmetic",
+      domainIcon: "💡",
+      introNarration: "There are 2 puppies in the park and 3 more puppy friends run over to play.",
+      questionSpoken: "How many puppies are in the park in total?",
+      expectedTokens: ["5", "five"],
+      quickChips: ["3", "4", "5", "6"],
+      complexity: "Single-step deduction",
+    },
+  ],
+  intermediate: [
+    {
+      id: 305,
+      domain: "reasoning",
+      domainTitle: "Multi-Step Logic",
+      domainIcon: "💡",
+      introNarration: "A toy train has 5 blue cars. The engineer adds 3 red cars and removes 1 blue car.",
+      questionSpoken: "How many cars are on the train in total?",
+      expectedTokens: ["7", "seven"],
+      quickChips: ["6", "7", "8", "9"],
+      complexity: "2-step arithmetic logic",
+    },
+    {
+      id: 306,
+      domain: "reasoning",
+      domainTitle: "Multi-Step Logic",
+      domainIcon: "💡",
+      introNarration: "Liam baked 6 cookies. He gave 2 cookies to his sister and baked 3 more fresh cookies.",
+      questionSpoken: "How many cookies does Liam have now?",
+      expectedTokens: ["7", "seven"],
+      quickChips: ["5", "6", "7", "8"],
+      complexity: "2-step arithmetic logic",
+    },
+  ],
+  advanced: [
+    {
+      id: 307,
+      domain: "reasoning",
+      domainTitle: "Complex Logic Deductions",
+      domainIcon: "💡",
+      introNarration: "A farmer has 10 sheep. Half of them are in the barn, and 2 more leave the barn to eat grass outside.",
+      questionSpoken: "How many sheep remain inside the barn?",
+      expectedTokens: ["3", "three"],
+      quickChips: ["2", "3", "4", "5"],
+      complexity: "Multi-variable logic deduction",
+    },
+    {
+      id: 308,
+      domain: "reasoning",
+      domainTitle: "Complex Logic Deductions",
+      domainIcon: "💡",
+      introNarration: "A box holds 12 colored pencils. You take out 4 pencils and put in 2 new shiny pencils.",
+      questionSpoken: "How many pencils are in the box now?",
+      expectedTokens: ["10", "ten"],
+      quickChips: ["8", "9", "10", "12"],
+      complexity: "Multi-step arithmetic logic",
+    },
+  ],
+  support: [
+    {
+      id: 309,
+      domain: "reasoning",
+      domainTitle: "Foundational Logic",
+      domainIcon: "💡",
+      introNarration: "You have 2 shiny stars and find 1 more shiny star in the sky.",
+      questionSpoken: "How many stars do you have in all?",
+      expectedTokens: ["3", "three"],
+      quickChips: ["2", "3", "4"],
+      complexity: "Foundational addition",
+    },
+  ],
+};
+
+// Dynamic Adaptive Interview Generator
+export function generateAdaptiveInterviewSession(lastQuestionIds: number[] = []): InterviewRound[] {
+  const pickFresh = (pool: InterviewRound[]): InterviewRound => {
+    const available = pool.filter((q) => !lastQuestionIds.includes(q.id));
+    const selection = available.length > 0 ? available : pool;
+    return selection[Math.floor(Math.random() * selection.length)];
+  };
+
+  const memQ = pickFresh(MEMORY_QUESTION_POOLS.baseline);
+  const attQ = pickFresh(ATTENTION_QUESTION_POOLS.baseline);
+  const reasQ = pickFresh(REASONING_QUESTION_POOLS.baseline);
+
+  return [
+    { ...memQ, id: 1 },
+    { ...attQ, id: 2 },
+    { ...reasQ, id: 3 },
+  ];
+}
 
 // Lightweight PCM WAV Encoder for direct browser audio
 function encodeWAV(samples: Float32Array, sampleRate = 16000): Blob {
@@ -170,8 +455,9 @@ export default function VoiceInterviewModal({
   onClose,
   onComplete,
 }: VoiceInterviewModalProps) {
+  const recentQuestionIdsRef = useRef<number[]>([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState<number>(0);
-  const [interviewRounds, setInterviewRounds] = useState<InterviewRound[]>(BASELINE_ROUNDS);
+  const [interviewRounds, setInterviewRounds] = useState<InterviewRound[]>(() => generateAdaptiveInterviewSession());
   const [interviewState, setInterviewState] = useState<"greeting" | "speaking" | "answering" | "results">("greeting");
   const [isListening, setIsListening] = useState<boolean>(false);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
@@ -528,18 +814,24 @@ export default function VoiceInterviewModal({
     if (isStartingRef.current) return; // Prevent double-click
     isStartingRef.current = true;
 
+    // Dynamically compose fresh adaptive interview rounds
+    const freshRounds = generateAdaptiveInterviewSession(recentQuestionIdsRef.current);
+    const newIds = freshRounds.map((r) => r.id);
+    recentQuestionIdsRef.current = [...recentQuestionIdsRef.current.slice(-10), ...newIds];
+
+    setInterviewRounds(freshRounds);
     setInterviewState("speaking");
     interviewStartTimeRef.current = Date.now();
     setCurrentRoundIndex(0);
     setRoundResults([]);
 
     // Greeting Narration
-    await speak(`Hi ${childName || "there"}! Let's play a quick brain challenge.`);
+    await speak(`Hi ${childName || "there"}! Let's play a fresh adaptive brain challenge.`);
     await new Promise((r) => setTimeout(r, 200));
 
     isStartingRef.current = false;
-    // Play First Round
-    playRound(0, BASELINE_ROUNDS);
+    // Play First Round with fresh questions
+    playRound(0, freshRounds);
   };
 
   // Skip narration directly to answering mode (also stops all audio)
@@ -650,20 +942,37 @@ export default function VoiceInterviewModal({
 
       // Adaptive titration:
       if (avgAcc >= 80) {
-        // High performer -> Give advanced multi-step challenge
-        const nextAdaptiveRound = ADVANCED_ROUNDS.memory;
+        // High performer -> Give advanced multi-step challenge from diverse pools
+        const advancedOptions = [
+          ...MEMORY_QUESTION_POOLS.advanced,
+          ...ATTENTION_QUESTION_POOLS.advanced,
+          ...REASONING_QUESTION_POOLS.advanced,
+        ];
+        const nextAdaptiveRound = {
+          ...advancedOptions[Math.floor(Math.random() * advancedOptions.length)],
+          id: 4,
+        };
         const expandedRounds = [...interviewRounds, nextAdaptiveRound];
         setInterviewRounds(expandedRounds);
         setCurrentRoundIndex(nextIndex);
-        isSubmittingRoundRef.current = false; // Reset guard before next round
+        isSubmittingRoundRef.current = false;
         playRound(nextIndex, expandedRounds);
         return;
       } else if (avgAcc < 60) {
-        // Struggling -> Give supportive foundational challenge
-        const expandedRounds = [...interviewRounds, SUPPORT_ROUND];
+        // Struggling -> Give supportive foundational challenge from diverse support pools
+        const supportOptions = [
+          ...MEMORY_QUESTION_POOLS.support,
+          ...ATTENTION_QUESTION_POOLS.support,
+          ...REASONING_QUESTION_POOLS.support,
+        ];
+        const nextAdaptiveRound = {
+          ...supportOptions[Math.floor(Math.random() * supportOptions.length)],
+          id: 4,
+        };
+        const expandedRounds = [...interviewRounds, nextAdaptiveRound];
         setInterviewRounds(expandedRounds);
         setCurrentRoundIndex(nextIndex);
-        isSubmittingRoundRef.current = false; // Reset guard before next round
+        isSubmittingRoundRef.current = false;
         playRound(nextIndex, expandedRounds);
         return;
       }

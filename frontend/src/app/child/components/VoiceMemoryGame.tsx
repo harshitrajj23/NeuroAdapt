@@ -125,7 +125,8 @@ export default function VoiceMemoryGame({
   onClose,
   onComplete,
 }: VoiceMemoryGameProps) {
-  const diff = Math.max(1, Math.min(6, config.difficulty || 3));
+  const [currentDiff, setCurrentDiff] = useState<number>(Math.max(1, Math.min(6, config.difficulty || 3)));
+  const diff = currentDiff;
   const targetWords: WordItem[] = WORD_POOLS[diff] || WORD_POOLS[3];
 
   const [phase, setPhase] = useState<"ready" | "study" | "recall" | "results">("ready");
@@ -1129,30 +1130,52 @@ export default function VoiceMemoryGame({
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-              <button
-                onClick={startStudyPhase}
-                className="cd-btn"
-                style={{
-                  background: "#F5F3FF",
-                  color: "#6D28D9",
-                  border: "1px solid #DDD6FE",
-                  padding: "12px 24px",
-                  borderRadius: "14px",
-                  fontWeight: 600,
-                }}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" /> Play Again
-              </button>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+              {nextLevelRec > diff ? (
+                <button
+                  onClick={() => {
+                    setCurrentDiff(nextLevelRec);
+                    setTimeout(() => startStudyPhase(), 50);
+                  }}
+                  className="cd-btn cd-btn--primary"
+                  style={{
+                    background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                    padding: "12px 28px",
+                    borderRadius: "14px",
+                    fontWeight: 700,
+                    boxShadow: "0 6px 20px rgba(16, 185, 129, 0.35)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Zap className="h-4 w-4" /> Play Level {nextLevelRec} Now ➔
+                </button>
+              ) : (
+                <button
+                  onClick={startStudyPhase}
+                  className="cd-btn"
+                  style={{
+                    background: "#F5F3FF",
+                    color: "#6D28D9",
+                    border: "1px solid #DDD6FE",
+                    padding: "12px 24px",
+                    borderRadius: "14px",
+                    fontWeight: 600,
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" /> Play Again
+                </button>
+              )}
               <button
                 onClick={() => {
                   cleanupAudio();
                   onComplete();
                   onClose();
                 }}
-                className="cd-btn cd-btn--primary"
+                className={nextLevelRec > diff ? "cd-btn cd-btn--secondary" : "cd-btn cd-btn--primary"}
                 style={{
-                  padding: "12px 30px",
+                  padding: "12px 28px",
                   borderRadius: "14px",
                   fontWeight: 700,
                 }}

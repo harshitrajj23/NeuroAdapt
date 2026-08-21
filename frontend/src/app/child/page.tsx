@@ -60,6 +60,9 @@ interface DashboardData {
     accuracy: number;
     avg_score: number;
     level: number;
+    next_level?: number;
+    next_level_progress?: number;
+    next_level_hint?: string;
     progress: number;
     max_difficulty: number;
   }>;
@@ -171,14 +174,25 @@ const DOMAIN_CONFIG: Record<
 function WelcomeHero({
   userName,
   stats,
+  recommended,
   onStartSession,
 }: {
   userName: string;
   stats: DashboardData["stats"];
+  recommended?: {
+    name: string;
+    domain: string;
+    level: number;
+    nextLevel?: number;
+    progressToNext?: number;
+    hint?: string;
+  } | null;
   onStartSession: () => void;
 }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+  const nextLvl = recommended?.nextLevel || (recommended ? Math.min(10, recommended.level + 1) : 2);
+  const progPct = recommended?.progressToNext !== undefined ? recommended.progressToNext : 65;
 
   return (
     <div className="cd-welcome-hero">
@@ -187,16 +201,70 @@ function WelcomeHero({
         <div className="cd-welcome-hero-left">
           <div className="cd-welcome-badge">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Today&apos;s Training</span>
+            <span>Today&apos;s Training • Adaptive Engine</span>
           </div>
           <h1 className="cd-welcome-heading">
             {greeting}, <span className="cd-welcome-name">{userName}</span>! 👋
           </h1>
           <p className="cd-welcome-subtitle">
-            {stats.total_sessions > 0
+            {recommended
+              ? `Recommended for you: ${recommended.name} calibrated at Level ${recommended.level}. Let's build your cognitive power!`
+              : stats.total_sessions > 0
               ? "You're doing amazing! Let's keep building your cognitive power today."
               : "Welcome to NeuroAdapt! Complete your assigned sessions to build cognitive strength."}
           </p>
+
+          {/* Dynamic Adaptive Level-Up Progress Gauge */}
+          {recommended && (
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.16)",
+                backdropFilter: "blur(12px)",
+                border: "1px solid rgba(255, 255, 255, 0.28)",
+                borderRadius: "16px",
+                padding: "12px 18px",
+                marginTop: "14px",
+                marginBottom: "16px",
+                maxWidth: "520px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ background: "rgba(255, 255, 255, 0.25)", padding: "3px 8px", borderRadius: "8px", fontSize: "11px", fontWeight: 800, color: "white" }}>
+                    ⚡ Level {recommended.level}
+                  </span>
+                  <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.9)", fontWeight: 700 }}>
+                    {recommended.level < 10 ? `➔ Next: Level ${nextLvl}` : "Master Tier"}
+                  </span>
+                </div>
+                <span style={{ fontSize: "12px", fontWeight: 800, color: "#FEF08A" }}>
+                  {recommended.level < 10 ? `${progPct}% close to Level ${nextLvl}` : "100% Mastered"}
+                </span>
+              </div>
+
+              {/* Glowing Progress Bar */}
+              <div style={{ height: "8px", background: "rgba(0, 0, 0, 0.25)", borderRadius: "10px", overflow: "hidden", position: "relative" }}>
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${progPct}%`,
+                    background: "linear-gradient(90deg, #FDE047 0%, #34D399 100%)",
+                    borderRadius: "10px",
+                    boxShadow: "0 0 12px rgba(253, 224, 71, 0.6)",
+                    transition: "width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "6px" }}>
+                <TrendingUp className="h-3.5 w-3.5 text-amber-300 flex-shrink-0" />
+                <span style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.95)", fontWeight: 600 }}>
+                  {recommended.hint || (recommended.level < 10 ? `Score ≥80% on your next ${recommended.name} game to level up to Level ${nextLvl}!` : "You have reached the highest unlocked level!")}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="cd-welcome-stats-row">
             <div className="cd-welcome-stat">
               <Flame className="h-4.5 w-4.5 text-orange-500" />
@@ -223,8 +291,12 @@ function WelcomeHero({
               <Play className="h-6 w-6" fill="currentColor" />
             </div>
             <div className="cd-start-session-text">
-              <span className="cd-start-session-title">Start Training</span>
-              <span className="cd-start-session-sub">Begin session</span>
+              <span className="cd-start-session-title">
+                {recommended ? `Play ${recommended.name}` : "Start Training"}
+              </span>
+              <span className="cd-start-session-sub">
+                {recommended ? `Level ${recommended.level} • Adaptive` : "Begin session"}
+              </span>
             </div>
             <ChevronRight className="h-5 w-5 cd-start-session-arrow" />
           </button>
@@ -461,15 +533,17 @@ function VoiceMemoryBanner({
 
 function CognitiveDomainCards({
   domainStats,
+  onPlayDomain,
 }: {
   domainStats: DashboardData["domain_stats"];
+  onPlayDomain?: (domain: string) => void;
 }) {
   return (
     <div className="cd-section">
       <div className="cd-section-header">
         <div>
           <h2 className="cd-section-title">Cognitive Domains</h2>
-          <p className="cd-section-subtitle">Your progress across all training areas</p>
+          <p className="cd-section-subtitle">Your progress across all training areas • Tap any domain to train at unlocked level</p>
         </div>
       </div>
       <div className="cd-domain-grid">
@@ -478,17 +552,24 @@ function CognitiveDomainCards({
             sessions: 0,
             accuracy: 0,
             avg_score: 0,
-            level: 0,
+            level: 1,
             progress: 0,
             max_difficulty: 1,
           };
+          const displayLvl = stats.level || stats.max_difficulty || 1;
           return (
-            <div key={key} className="cd-domain-card" style={{ animationDelay: `${i * 90}ms` }}>
+            <div
+              key={key}
+              className="cd-domain-card"
+              style={{ animationDelay: `${i * 90}ms`, cursor: onPlayDomain ? "pointer" : "default" }}
+              onClick={() => onPlayDomain && onPlayDomain(key)}
+              title={`Train in ${config.label} at Level ${displayLvl}`}
+            >
               <div className="cd-domain-card-top">
                 <div className="cd-domain-icon-wrap" style={{ background: `${config.color}15`, color: config.color }}>
                   {config.icon}
                 </div>
-                <span className="cd-domain-level-badge">Lvl {stats.level}</span>
+                <span className="cd-domain-level-badge">Lvl {displayLvl}</span>
               </div>
               <h3 className="cd-domain-name">{config.label}</h3>
               <div className="cd-domain-ring-section">
@@ -506,10 +587,38 @@ function CognitiveDomainCards({
                     <strong>{stats.accuracy}%</strong>
                   </div>
                   <div className="cd-domain-stat-mini-row">
-                    <span>Avg Score</span>
-                    <strong>{stats.avg_score}</strong>
+                    <span>Unlocked</span>
+                    <strong style={{ color: config.color }}>Level {displayLvl}</strong>
                   </div>
                 </div>
+              </div>
+
+              {/* Adaptive Next-Level Progress Bar & Hint */}
+              <div style={{ marginTop: "14px", paddingTop: "10px", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: 700, marginBottom: "5px" }}>
+                  <span style={{ color: "#6B6580" }}>
+                    {displayLvl < 10 ? `➔ Next: Level ${stats.next_level || displayLvl + 1}` : "🌟 Master Tier"}
+                  </span>
+                  <span style={{ color: config.color, fontWeight: 800 }}>
+                    {displayLvl < 10 ? `${stats.next_level_progress || 0}% close` : "100%"}
+                  </span>
+                </div>
+                <div style={{ height: "6px", background: "#F3F0FA", borderRadius: "10px", overflow: "hidden" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${stats.next_level_progress || 0}%`,
+                      background: config.color,
+                      borderRadius: "10px",
+                      transition: "width 0.4s ease",
+                    }}
+                  />
+                </div>
+                {stats.next_level_hint && displayLvl < 10 && (
+                  <p style={{ fontSize: "10.5px", color: "#6B6580", margin: "5px 0 0", lineHeight: 1.3, fontWeight: 500 }}>
+                    {stats.next_level_hint}
+                  </p>
+                )}
               </div>
             </div>
           );
@@ -686,32 +795,88 @@ export default function ChildDashboard() {
     fetchData();
   }, [user, apiUrl]);
 
-  const handleStartSession = () => {
+  // Find the recommended adaptive exercise for Today's Training
+  const getRecommendedExercise = () => {
+    // 1. If tied to an active assignment, feature it
     if (dashData?.active_assignments && dashData.active_assignments.length > 0) {
       const a = dashData.active_assignments[0];
-      setActiveGameConfig({
+      const s = dashData.domain_stats[a.domain];
+      return {
         exerciseId: a.exercise_id,
-        exerciseName: a.exercise_name,
+        name: a.exercise_name,
         domain: a.domain,
-        difficulty: a.difficulty,
+        level: a.difficulty,
+        nextLevel: s?.next_level || Math.min(10, a.difficulty + 1),
+        progressToNext: s?.next_level_progress !== undefined ? s.next_level_progress : 65,
+        hint: s?.next_level_hint,
         assignmentId: a.id,
         notes: a.notes,
-      });
-    } else if (exercises.length > 0) {
-      const ex = exercises[0];
-      const liveDiff = dashData?.domain_stats?.[ex.domain]?.level || ex.difficulty || 1;
+      };
+    }
+
+    // 2. Feature the domain/exercise the child most recently played so progress immediately updates
+    if (dashData?.recent_sessions && dashData.recent_sessions.length > 0 && exercises.length > 0) {
+      const lastDomain = dashData.recent_sessions[0].domain;
+      const matchingEx = exercises.find((e) => e.domain === lastDomain) || exercises[0];
+      if (matchingEx && dashData.domain_stats[lastDomain]) {
+        const s = dashData.domain_stats[lastDomain];
+        const lvl = s?.level || s?.max_difficulty || matchingEx.difficulty || 1;
+        return {
+          exerciseId: matchingEx.id,
+          name: matchingEx.name,
+          domain: lastDomain,
+          level: lvl,
+          nextLevel: s?.next_level || Math.min(10, lvl + 1),
+          progressToNext: s?.next_level_progress !== undefined ? s.next_level_progress : 60,
+          hint: s?.next_level_hint,
+        };
+      }
+    }
+
+    // 3. Fallback to active cognitive domain
+    if (exercises.length > 0 && dashData?.domain_stats) {
+      const domains = ["memory", "reasoning", "problem_solving", "attention"];
+      for (const dom of domains) {
+        const matchingEx = exercises.find((e) => e.domain === dom);
+        if (matchingEx && dashData.domain_stats[dom]) {
+          const s = dashData.domain_stats[dom];
+          const lvl = s?.level || s?.max_difficulty || matchingEx.difficulty || 1;
+          return {
+            exerciseId: matchingEx.id,
+            name: matchingEx.name,
+            domain: dom,
+            level: lvl,
+            nextLevel: s?.next_level || Math.min(10, lvl + 1),
+            progressToNext: s?.next_level_progress !== undefined ? s.next_level_progress : 60,
+            hint: s?.next_level_hint,
+          };
+        }
+      }
+    }
+    const defaultEx = exercises[0] || { id: 1, name: "Focus Matrix", domain: "attention", difficulty: 1 };
+    const defS = dashData?.domain_stats?.[defaultEx.domain];
+    return {
+      exerciseId: defaultEx.id,
+      name: defaultEx.name,
+      domain: defaultEx.domain,
+      level: defS?.level || defaultEx.difficulty || 1,
+      nextLevel: defS?.next_level || 2,
+      progressToNext: defS?.next_level_progress !== undefined ? defS.next_level_progress : 50,
+      hint: defS?.next_level_hint,
+    };
+  };
+
+  const recommendedExercise = dashData ? getRecommendedExercise() : null;
+
+  const handleStartSession = () => {
+    if (recommendedExercise) {
       setActiveGameConfig({
-        exerciseId: ex.id,
-        exerciseName: ex.name,
-        domain: ex.domain,
-        difficulty: liveDiff,
-      });
-    } else {
-      setActiveGameConfig({
-        exerciseId: 1,
-        exerciseName: "Focus Matrix",
-        domain: "attention",
-        difficulty: 1,
+        exerciseId: recommendedExercise.exerciseId,
+        exerciseName: recommendedExercise.name,
+        domain: recommendedExercise.domain,
+        difficulty: recommendedExercise.level,
+        assignmentId: (recommendedExercise as any).assignmentId || null,
+        notes: (recommendedExercise as any).notes,
       });
     }
   };
@@ -725,6 +890,19 @@ export default function ChildDashboard() {
       assignmentId: a.id,
       notes: a.notes,
     });
+  };
+
+  const handlePlayDomain = (domain: string) => {
+    const matchingEx = exercises.find((e) => e.domain === domain) || exercises[0];
+    if (matchingEx) {
+      const lvl = dashData?.domain_stats?.[domain]?.level || matchingEx.difficulty || 1;
+      setActiveGameConfig({
+        exerciseId: matchingEx.id,
+        exerciseName: matchingEx.name,
+        domain: domain,
+        difficulty: lvl,
+      });
+    }
   };
 
   const handlePlayExercise = (ex: ExerciseData) => {
@@ -744,13 +922,18 @@ export default function ChildDashboard() {
   };
 
   const handleStartVoiceChallenge = () => {
-    const memLvl = dashData?.domain_stats?.memory?.level || 3;
+    const memLvl = dashData?.domain_stats?.memory?.level || dashData?.domain_stats?.memory?.max_difficulty || 3;
     setActiveGameConfig({
       exerciseId: 7,
       exerciseName: "Voice Memory Recall",
       domain: "memory",
       difficulty: memLvl,
     });
+  };
+
+  const handleGameComplete = async () => {
+    setActiveGameConfig(null);
+    await fetchData();
   };
 
   if (loading || !dashData) {
@@ -763,10 +946,17 @@ export default function ChildDashboard() {
   }
 
   const displayName = dashData.user.name || user?.name || "User";
+  const childId = dashData.user.id;
 
   return (
-    <>
-      <WelcomeHero userName={displayName} stats={dashData.stats} onStartSession={handleStartSession} />
+    <div className="cd-dashboard-page">
+      <WelcomeHero
+        userName={displayName}
+        stats={dashData.stats}
+        recommended={recommendedExercise}
+        onStartSession={handleStartSession}
+      />
+
       <QuickStatsBar stats={dashData.stats} />
 
       {/* Featured AI Voice Cognitive Interview & Memory Banner */}
@@ -781,33 +971,38 @@ export default function ChildDashboard() {
         onPlayAssignment={handlePlayAssignment}
       />
 
-      <CognitiveDomainCards domainStats={dashData.domain_stats} />
+      <CognitiveDomainCards
+        domainStats={dashData.domain_stats}
+        onPlayDomain={handlePlayDomain}
+      />
 
       <ExercisesList exercises={exercises} onPlayExercise={handlePlayExercise} />
 
       <RecentSessions sessions={dashData.recent_sessions} />
 
-      {/* AI Voice Cognitive Interview Interactive Modal */}
+      {/* Interactive In-App Cognitive Exercise Game Modal */}
+      {activeGameConfig && (
+        <InteractiveExerciseGame
+          config={activeGameConfig}
+          childId={childId}
+          apiUrl={apiUrl}
+          onClose={() => {
+            setActiveGameConfig(null);
+            fetchData();
+          }}
+          onComplete={handleGameComplete}
+        />
+      )}
+
+      {/* AI Voice Cognitive Interview Modal */}
       {isInterviewOpen && (
         <VoiceInterviewModal
-          childId={dashData.child_id || dashData.user.id}
+          childId={childId}
           childName={displayName}
           apiUrl={apiUrl}
           onClose={() => setIsInterviewOpen(false)}
           onComplete={() => {
-            fetchData();
-          }}
-        />
-      )}
-
-      {/* Interactive Playable Game Modal */}
-      {activeGameConfig && (
-        <InteractiveExerciseGame
-          config={activeGameConfig}
-          childId={dashData.child_id || dashData.user.id}
-          apiUrl={apiUrl}
-          onClose={() => setActiveGameConfig(null)}
-          onComplete={() => {
+            setIsInterviewOpen(false);
             fetchData();
           }}
         />
@@ -816,6 +1011,6 @@ export default function ChildDashboard() {
       <footer className="cd-footer">
         <span>NeuroAdapt © 2026 — AI-assisted cognitive rehabilitation</span>
       </footer>
-    </>
+    </div>
   );
 }

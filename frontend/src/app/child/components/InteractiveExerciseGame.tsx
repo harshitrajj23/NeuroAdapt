@@ -45,13 +45,14 @@ export default function InteractiveExerciseGame({
   onClose,
   onComplete,
 }: InteractiveGameProps) {
-  const diff = Math.max(1, Math.min(10, config.difficulty || 1));
+  const [currentDiff, setCurrentDiff] = useState<number>(Math.max(1, Math.min(10, config.difficulty || 1)));
+  const diff = currentDiff;
 
   // If this is a Voice Recall challenge, delegate directly to VoiceMemoryGame
   if (config.exerciseName.toLowerCase().includes("voice") || config.exerciseId === 7) {
     return (
       <VoiceMemoryGame
-        config={config}
+        config={{ ...config, difficulty: diff }}
         childId={childId}
         apiUrl={apiUrl}
         onClose={onClose}
@@ -103,8 +104,11 @@ export default function InteractiveExerciseGame({
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isOptionLocked, setIsOptionLocked] = useState(false);
 
-  // Start the game
-  const startExercise = () => {
+  // Start the game with optional override difficulty
+  const startExercise = (overrideDiff?: number) => {
+    const activeD = overrideDiff || currentDiff;
+    if (overrideDiff) setCurrentDiff(overrideDiff);
+
     setGameState("playing");
     setScore(0);
     setErrors(0);
@@ -534,7 +538,7 @@ export default function InteractiveExerciseGame({
               Click correct answers (marks <strong>Green</strong>). Wrong answers highlight in <strong>Red</strong>. Focus on speed and accuracy!
             </p>
             <button
-              onClick={startExercise}
+              onClick={() => startExercise()}
               className="cd-hero-btn"
               style={{ padding: "14px 40px", fontSize: "16px", margin: "0 auto", display: "inline-flex" }}
             >
@@ -780,13 +784,61 @@ export default function InteractiveExerciseGame({
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="cd-hero-btn"
-              style={{ padding: "12px 36px", margin: "0 auto", display: "inline-flex" }}
-            >
-              <Check className="h-4 w-4" /> Return to Dashboard
-            </button>
+            {completionResult?.adaptive_next_difficulty && completionResult.adaptive_next_difficulty > diff && (
+              <div style={{ background: "#ECFDF5", border: "1.5px solid #10B981", borderRadius: "16px", padding: "14px", marginBottom: "20px" }}>
+                <span style={{ fontSize: "15px", fontWeight: 800, color: "#065F46", display: "block" }}>
+                  🚀 Level Up Unlocked! (Level {completionResult.adaptive_next_difficulty})
+                </span>
+                <span style={{ fontSize: "12px", color: "#047857" }}>
+                  High accuracy achieved! Ready for a higher cognitive challenge?
+                </span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+              {completionResult?.adaptive_next_difficulty && completionResult.adaptive_next_difficulty > diff ? (
+                <button
+                  onClick={() => {
+                    const nextD = completionResult.adaptive_next_difficulty;
+                    startExercise(nextD);
+                  }}
+                  className="cd-hero-btn"
+                  style={{
+                    padding: "12px 28px",
+                    background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                    boxShadow: "0 6px 20px rgba(16, 185, 129, 0.35)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <Zap className="h-4 w-4" /> Play Level {completionResult.adaptive_next_difficulty} Now ➔
+                </button>
+              ) : (
+                <button
+                  onClick={() => startExercise(diff)}
+                  className="cd-btn cd-btn--secondary"
+                  style={{ padding: "12px 24px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <RotateCcw className="h-4 w-4" /> Play Again
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  onComplete({
+                    score,
+                    accuracy,
+                    nextDifficulty: completionResult?.adaptive_next_difficulty || diff,
+                  });
+                  onClose();
+                }}
+                className={completionResult?.adaptive_next_difficulty && completionResult.adaptive_next_difficulty > diff ? "cd-btn cd-btn--secondary" : "cd-hero-btn"}
+                style={{ padding: "12px 28px", display: "inline-flex", alignItems: "center", gap: "8px" }}
+              >
+                <Check className="h-4 w-4" /> Return to Dashboard
+              </button>
+            </div>
           </div>
         )}
       </div>

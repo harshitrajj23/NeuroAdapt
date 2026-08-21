@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, List, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from .database import engine, Base, get_db
 from .models import User, Child, Exercise, SessionRecord, Performance, Recommendation, TherapyPlan, Assignment, Notification, VoiceInterview
@@ -253,25 +253,54 @@ def get_child_dashboard(user_id: int, db: Session = Depends(get_db)):
                     SessionRecord.child_id == child_id,
                     Exercise.domain == domain_name
                 )
+                .order_by(SessionRecord.started_at.asc())
                 .all()
             )
             avg_accuracy = round(sum(p.accuracy for p in d_tuples) / len(d_tuples), 1) if d_tuples else 0
             avg_score = round(sum(p.score for p in d_tuples) / len(d_tuples)) if d_tuples else 0
             max_difficulty = max((p.difficulty for p in d_tuples), default=1)
             level = max_difficulty if d_tuples else 1
+            next_level = min(10, level + 1)
             progress = round(avg_accuracy) if d_tuples else 0
+
+            # Calculate dynamic progress directly tied to latest game performance
+            if d_tuples and level < 10:
+                recent_perf = d_tuples[-1]
+                recent_acc = round(recent_perf.accuracy, 1)
+                next_level_progress = min(99, max(5, int(recent_acc)))
+
+                if recent_acc >= 80:
+                    hint = f"🎉 Excellent! You scored {recent_acc}% on your last game! Ready for Level {next_level}."
+                elif recent_acc >= 60:
+                    needed = max(1, round(80 - recent_acc))
+                    hint = f"Good effort! You scored {recent_acc}% on your last game ({needed}% more accuracy needed to unlock Level {next_level})."
+                else:
+                    needed = max(1, round(80 - recent_acc))
+                    hint = f"Keep practicing! You scored {recent_acc}% on your last game ({needed}% more accuracy needed to unlock Level {next_level})."
+            elif level >= 10:
+                next_level_progress = 100
+                hint = "🌟 Maximum Mastery Achieved! (Level 10 Master Tier)"
+            else:
+                next_level_progress = 15
+                hint = f"Play your next game at Level {level} to start building progress toward Level {next_level}!"
+
             domain_stats[domain_name] = {
                 "sessions": len(d_tuples),
                 "accuracy": avg_accuracy,
                 "avg_score": avg_score,
                 "level": level,
+                "next_level": next_level,
+                "next_level_progress": next_level_progress,
+                "next_level_hint": hint,
                 "progress": progress,
                 "max_difficulty": max_difficulty,
             }
         else:
             domain_stats[domain_name] = {
                 "sessions": 0, "accuracy": 0, "avg_score": 0,
-                "level": 1, "progress": 0, "max_difficulty": 1,
+                "level": 1, "next_level": 2, "next_level_progress": 0,
+                "next_level_hint": "Play your first session to begin progress toward Level 2!",
+                "progress": 0, "max_difficulty": 1,
             }
 
     # Overall stats
@@ -288,6 +317,27 @@ def get_child_dashboard(user_id: int, db: Session = Depends(get_db)):
     total_score = sum(p.score for p in all_perfs)
     total_time_ms = sum(p.response_time for p in all_perfs)
     total_time_min = round(total_time_ms / 60000, 1) if total_time_ms else 0
+
+    # Calculate real active calendar day streak
+    streak_days = 0
+    if child_id:
+        all_session_records = (
+            db.query(SessionRecord)
+            .filter(SessionRecord.child_id == child_id)
+            .order_by(SessionRecord.started_at.desc())
+            .all()
+        )
+        if all_session_records:
+            session_dates = {s.started_at.date() for s in all_session_records if s.started_at}
+            today = datetime.utcnow().date()
+            yesterday = today - timedelta(days=1)
+            check_date = today if today in session_dates else yesterday
+            if check_date in session_dates:
+                while check_date in session_dates:
+                    streak_days += 1
+                    check_date -= timedelta(days=1)
+            elif len(session_dates) > 0:
+                streak_days = 1
 
     # Fetch active assignments with joined query
     active_assignments = []
@@ -333,7 +383,7 @@ def get_child_dashboard(user_id: int, db: Session = Depends(get_db)):
             "avg_accuracy": avg_accuracy_overall,
             "total_xp": total_score,
             "total_time_min": total_time_min,
-            "streak_days": 0,
+            "streak_days": streak_days,
         },
         "active_assignments": active_assignments,
         "domain_stats": domain_stats,
@@ -407,8 +457,9 @@ def get_child_achievements(user_id: int, db: Session = Depends(get_db)):
     total_score = 0
     domains_played = set()
 
+    streak_days = 0
     if child:
-        sessions = db.query(SessionRecord).filter(SessionRecord.child_id == child.id).all()
+        sessions = db.query(SessionRecord).filter(SessionRecord.child_id == child.id).order_by(SessionRecord.started_at.desc()).all()
         total_sessions = len(sessions)
         session_ids = [s.id for s in sessions]
         perfs = db.query(Performance).filter(Performance.session_id.in_(session_ids)).all() if session_ids else []
@@ -420,11 +471,22 @@ def get_child_achievements(user_id: int, db: Session = Depends(get_db)):
             if ex:
                 domains_played.add(ex.domain)
 
+        session_dates = {s.started_at.date() for s in sessions if s.started_at}
+        today = datetime.utcnow().date()
+        yesterday = today - timedelta(days=1)
+        check_date = today if today in session_dates else yesterday
+        if check_date in session_dates:
+            while check_date in session_dates:
+                streak_days += 1
+                check_date -= timedelta(days=1)
+        elif len(session_dates) > 0:
+            streak_days = 1
+
     achievements = [
         {"id": "first_steps", "title": "First Steps", "icon": "🌟", "description": "Complete your first session", "earned": total_sessions >= 1},
         {"id": "sharp_eye", "title": "Sharp Eye", "icon": "👁️", "description": "Achieve 80% accuracy", "earned": max_accuracy >= 80},
         {"id": "memory_master", "title": "Memory Master", "icon": "🧠", "description": "Complete 5 memory exercises", "earned": False},
-        {"id": "streak_hero", "title": "Streak Hero", "icon": "🔥", "description": "Maintain a 7-day streak", "earned": False},
+        {"id": "streak_hero", "title": "Streak Hero", "icon": "🔥", "description": "Maintain a 3+ day streak", "earned": streak_days >= 3},
         {"id": "perfect_score", "title": "Perfect Score", "icon": "💯", "description": "Get 100% accuracy", "earned": max_accuracy >= 100},
         {"id": "speed_demon", "title": "Speed Demon", "icon": "⚡", "description": "Complete exercise under 2 min", "earned": False},
         {"id": "explorer", "title": "Explorer", "icon": "🗺️", "description": "Try all 4 cognitive domains", "earned": len(domains_played) >= 4},
@@ -443,7 +505,7 @@ def get_child_achievements(user_id: int, db: Session = Depends(get_db)):
             if a["id"] == "memory_master":
                 a["earned"] = memory_sessions >= 5
 
-    return {"achievements": achievements, "total_sessions": total_sessions, "total_score": total_score}
+    return {"achievements": achievements, "total_sessions": total_sessions, "total_score": total_score, "streak_days": streak_days}
 
 
 # =====================================================================
@@ -1200,7 +1262,14 @@ def complete_exercise_session(req: SessionCompletionPayload, db: Session = Depen
     Adaptive difficulty recalculated -> Clinician notification created ->
     Instant result stream to Clinician.
     """
+    # Robust child resolution (handles both Child.id and User.id)
     child = db.query(Child).filter(Child.id == req.child_id).first()
+    user_match = db.query(User).filter(User.id == req.child_id).first()
+    if user_match and user_match.role == "child":
+        named_child = db.query(Child).filter(Child.name == user_match.name).first()
+        if named_child:
+            child = named_child
+
     if not child:
         raise HTTPException(status_code=404, detail="Child patient not found")
     exercise = db.query(Exercise).filter(Exercise.id == req.exercise_id).first()
@@ -1211,7 +1280,7 @@ def complete_exercise_session(req: SessionCompletionPayload, db: Session = Depen
 
     # 1. Create SessionRecord in DB
     session_rec = SessionRecord(
-        child_id=req.child_id,
+        child_id=child.id,
         exercise_id=req.exercise_id,
         started_at=now,
         completed_at=now
@@ -1240,7 +1309,7 @@ def complete_exercise_session(req: SessionCompletionPayload, db: Session = Depen
             assignment.session_id = session_rec.id
 
     # 4. Adaptive Difficulty Engine (PRD Section 10 & 11)
-    plan = db.query(TherapyPlan).filter(TherapyPlan.child_id == req.child_id).first()
+    plan = db.query(TherapyPlan).filter(TherapyPlan.child_id == child.id).first()
     min_bound = plan.min_difficulty if plan else 1
     max_bound = plan.max_difficulty if plan else 10
 
@@ -1251,7 +1320,7 @@ def complete_exercise_session(req: SessionCompletionPayload, db: Session = Depen
         new_diff = max(req.difficulty - 1, min_bound)
 
     rec = Recommendation(
-        child_id=req.child_id,
+        child_id=child.id,
         session_id=session_rec.id,
         recommended_difficulty=new_diff,
         recommended_exercise=exercise.name,
