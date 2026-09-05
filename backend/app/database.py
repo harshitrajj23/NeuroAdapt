@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./neuroadapt.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./neuroadapt.db").strip().strip("'\"")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
