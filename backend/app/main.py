@@ -29,8 +29,11 @@ from .services.pdf_report_service import build_clinical_report_pdf
 from .services.telegram_service import send_telegram_message, generate_parent_update_prompt
 from .cache import get_cache, set_cache, invalidate_cache
 
-# Create database tables if not exist
-Base.metadata.create_all(bind=engine)
+# Create database tables if not exist (non-blocking on deployment startup)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as _db_err:
+    print(f"[NeuroAdapt Startup] Notice: Table auto-creation deferred: {_db_err}")
 
 app = FastAPI(
     title="NeuroAdapt API",

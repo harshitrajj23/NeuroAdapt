@@ -184,7 +184,7 @@ export const ATTENTION_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "🎯",
       introNarration: "I'll say some numbers. Tell me only the number you hear twice: 3… 7… 4… 7… 9…",
       questionSpoken: "Which number did you hear twice?",
-      expectedTokens: ["7", "seven"],
+      expectedTokens: ["7"],
       quickChips: ["3", "7", "4", "9"],
       complexity: "5-digit sequence · Vigilance",
     },
@@ -195,7 +195,7 @@ export const ATTENTION_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "🎯",
       introNarration: "Listen to this sequence: 5… 2… 8… 2… 6… Focus on repeats.",
       questionSpoken: "Which number repeated?",
-      expectedTokens: ["2", "two"],
+      expectedTokens: ["2"],
       quickChips: ["5", "2", "8", "6"],
       complexity: "5-digit sequence · Vigilance",
     },
@@ -206,7 +206,7 @@ export const ATTENTION_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "🎯",
       introNarration: "Listen carefully: 1… 9… 4… 9… 3…",
       questionSpoken: "Which number was spoken twice?",
-      expectedTokens: ["9", "nine"],
+      expectedTokens: ["9"],
       quickChips: ["1", "9", "4", "3"],
       complexity: "5-digit sequence · Vigilance",
     },
@@ -217,7 +217,7 @@ export const ATTENTION_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "🎯",
       introNarration: "Track these numbers: 6… 3… 8… 3… 5…",
       questionSpoken: "Which number repeated two times?",
-      expectedTokens: ["3", "three"],
+      expectedTokens: ["3"],
       quickChips: ["6", "3", "8", "5"],
       complexity: "5-digit sequence · Vigilance",
     },
@@ -230,7 +230,7 @@ export const ATTENTION_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "🎯",
       introNarration: "Longer sequence incoming: 8… 4… 1… 7… 4… 2…",
       questionSpoken: "Which number appeared twice?",
-      expectedTokens: ["4", "four"],
+      expectedTokens: ["4"],
       quickChips: ["8", "4", "1", "7", "2"],
       complexity: "6-digit sequence · Sustained",
     },
@@ -241,7 +241,7 @@ export const ATTENTION_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "🎯",
       introNarration: "Listen closely: 9… 5… 3… 6… 5… 8…",
       questionSpoken: "Which number did you hear two times?",
-      expectedTokens: ["5", "five"],
+      expectedTokens: ["5"],
       quickChips: ["9", "5", "3", "6", "8"],
       complexity: "6-digit sequence · Sustained",
     },
@@ -254,7 +254,7 @@ export const ATTENTION_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "🎯",
       introNarration: "Listen carefully to this sequence: 6… 2… 8… 2… 5… 8… 1…",
       questionSpoken: "Which numbers appeared two times?",
-      expectedTokens: ["2", "two", "8", "eight"],
+      expectedTokens: ["2", "8"],
       quickChips: ["2 and 8", "2", "8", "6", "5"],
       complexity: "Dual repeated targets · High Load",
     },
@@ -265,7 +265,7 @@ export const ATTENTION_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "🎯",
       introNarration: "Focus on double repeats: 4… 7… 3… 7… 9… 4… 2…",
       questionSpoken: "Which two numbers repeated?",
-      expectedTokens: ["4", "four", "7", "seven"],
+      expectedTokens: ["4", "7"],
       quickChips: ["4 and 7", "4", "7", "3", "9"],
       complexity: "Dual repeated targets · High Load",
     },
@@ -278,7 +278,7 @@ export const ATTENTION_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "🎯",
       introNarration: "Short sequence: 4… 1… 4… 6…",
       questionSpoken: "Which number did you hear twice?",
-      expectedTokens: ["4", "four"],
+      expectedTokens: ["4"],
       quickChips: ["4", "1", "6"],
       complexity: "4-digit sequence · Foundational",
     },
@@ -294,7 +294,7 @@ export const REASONING_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "💡",
       introNarration: "Listen to this story: Ravi has 3 apples and gives 1 to his friend.",
       questionSpoken: "How many apples does Ravi have now?",
-      expectedTokens: ["2", "two"],
+      expectedTokens: ["2"],
       quickChips: ["1", "2", "3", "4"],
       complexity: "Single-step deduction",
     },
@@ -305,7 +305,7 @@ export const REASONING_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "💡",
       introNarration: "A party basket has 4 balloons and 2 pop with a loud bang.",
       questionSpoken: "How many balloons are left in the basket?",
-      expectedTokens: ["2", "two"],
+      expectedTokens: ["2"],
       quickChips: ["1", "2", "3", "4"],
       complexity: "Single-step deduction",
     },
@@ -316,7 +316,7 @@ export const REASONING_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "💡",
       introNarration: "Maya picked 5 blue flowers and gave 2 to her mother.",
       questionSpoken: "How many flowers does Maya have now?",
-      expectedTokens: ["3", "three"],
+      expectedTokens: ["3"],
       quickChips: ["2", "3", "4", "5"],
       complexity: "Single-step deduction",
     },
@@ -327,7 +327,7 @@ export const REASONING_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "💡",
       introNarration: "There are 2 puppies in the park and 3 more puppy friends run over to play.",
       questionSpoken: "How many puppies are in the park in total?",
-      expectedTokens: ["5", "five"],
+      expectedTokens: ["5"],
       quickChips: ["3", "4", "5", "6"],
       complexity: "Single-step deduction",
     },
@@ -340,7 +340,7 @@ export const REASONING_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "💡",
       introNarration: "A toy train has 5 blue cars. The engineer adds 3 red cars and removes 1 blue car.",
       questionSpoken: "How many cars are on the train in total?",
-      expectedTokens: ["7", "seven"],
+      expectedTokens: ["7"],
       quickChips: ["6", "7", "8", "9"],
       complexity: "2-step arithmetic logic",
     },
@@ -351,7 +351,7 @@ export const REASONING_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "💡",
       introNarration: "Liam baked 6 cookies. He gave 2 cookies to his sister and baked 3 more fresh cookies.",
       questionSpoken: "How many cookies does Liam have now?",
-      expectedTokens: ["7", "seven"],
+      expectedTokens: ["7"],
       quickChips: ["5", "6", "7", "8"],
       complexity: "2-step arithmetic logic",
     },
@@ -364,7 +364,7 @@ export const REASONING_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "💡",
       introNarration: "A farmer has 10 sheep. Half of them are in the barn, and 2 more leave the barn to eat grass outside.",
       questionSpoken: "How many sheep remain inside the barn?",
-      expectedTokens: ["3", "three"],
+      expectedTokens: ["3"],
       quickChips: ["2", "3", "4", "5"],
       complexity: "Multi-variable logic deduction",
     },
@@ -375,7 +375,7 @@ export const REASONING_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "💡",
       introNarration: "A box holds 12 colored pencils. You take out 4 pencils and put in 2 new shiny pencils.",
       questionSpoken: "How many pencils are in the box now?",
-      expectedTokens: ["10", "ten"],
+      expectedTokens: ["10"],
       quickChips: ["8", "9", "10", "12"],
       complexity: "Multi-step arithmetic logic",
     },
@@ -388,9 +388,20 @@ export const REASONING_QUESTION_POOLS: Record<"baseline" | "intermediate" | "adv
       domainIcon: "💡",
       introNarration: "You have 2 shiny stars and find 1 more shiny star in the sky.",
       questionSpoken: "How many stars do you have in all?",
-      expectedTokens: ["3", "three"],
+      expectedTokens: ["3"],
       quickChips: ["2", "3", "4"],
       complexity: "Foundational addition",
+    },
+    {
+      id: 310,
+      domain: "reasoning",
+      domainTitle: "Foundational Logic",
+      domainIcon: "💡",
+      introNarration: "Leo has 4 red blocks. He gives 1 red block to his brother.",
+      questionSpoken: "How many red blocks does Leo have left?",
+      expectedTokens: ["3"],
+      quickChips: ["2", "3", "4"],
+      complexity: "Foundational subtraction",
     },
   ],
 };
@@ -622,22 +633,20 @@ export default function VoiceInterviewModal({
 
           rec.onresult = (event: any) => {
             const gen = roundGenerationRef.current;
-            // Only use FINAL results to avoid duplication
-            let finalTranscript = "";
+            let liveStreamTranscript = "";
             for (let i = 0; i < event.results.length; i++) {
-              if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript + " ";
-              }
+              liveStreamTranscript += event.results[i][0].transcript + " ";
             }
-            // Also grab the latest interim for live preview
-            const lastResult = event.results[event.results.length - 1];
-            const interim = lastResult && !lastResult.isFinal ? lastResult[0].transcript : "";
 
-            const clean = (finalTranscript + interim).trim();
-            // Discard if round changed since this recognition started
+            const clean = liveStreamTranscript.trim();
+            // Instantly update UI transcript in real-time as words are spoken
             if (clean && gen === roundGenerationRef.current) {
               setSpokenTranscript(clean);
             }
+          };
+
+          rec.onerror = (event: any) => {
+            console.warn("SpeechRecognition error:", event.error);
           };
 
           rec.onend = () => {
@@ -646,7 +655,7 @@ export default function VoiceInterviewModal({
                 try {
                   if (shouldListenRef.current) rec.start();
                 } catch {}
-              }, 300);
+              }, 150);
             }
           };
 
@@ -757,8 +766,7 @@ export default function VoiceInterviewModal({
     const wavBlob = encodeWAV(merged, 16000);
     setIsTranscribing(true);
 
-    // Fire the transcription but DON'T write to spokenTranscript/typedAnswer
-    // (browser SpeechRecognition already handles that in real-time)
+    // Fire the transcription: if browser SpeechRecognition missed words, server transcription automatically populates it!
     const transcriptionPromise = (async (): Promise<string> => {
       try {
         const formData = new FormData();
@@ -772,7 +780,14 @@ export default function VoiceInterviewModal({
         if (res.ok) {
           const data = await res.json();
           if (data.transcript && data.transcript.trim()) {
-            return data.transcript.trim();
+            const serverText = data.transcript.trim();
+            setSpokenTranscript((prev) => {
+              if (!prev || prev.trim().length === 0) {
+                return serverText;
+              }
+              return prev;
+            });
+            return serverText;
           }
         }
       } catch {} finally {
@@ -888,9 +903,16 @@ export default function VoiceInterviewModal({
     const latencyMs = Math.max(800, Date.now() - roundStartTimeRef.current);
     const round = interviewRounds[currentRoundIndex];
 
-    // Use whatever SpeechRecognition already captured (instant, no server wait)
-    // The server transcription runs in background for supplemental data only
-    const extraTranscript = "";
+    // If client SpeechRecognition was empty, wait up to 1500ms for server transcription fallback
+    let extraTranscript = "";
+    if (!spokenTranscript.trim() && !typedAnswer.trim() && pendingTranscriptRef.current) {
+      try {
+        extraTranscript = await Promise.race([
+          pendingTranscriptRef.current,
+          new Promise<string>((r) => setTimeout(() => r(""), 1600)),
+        ]);
+      } catch {}
+    }
 
     const childSpoken = `${spokenTranscript} ${typedAnswer} ${extraTranscript}`.toLowerCase().trim();
     const cleanTokens = childSpoken
@@ -898,24 +920,46 @@ export default function VoiceInterviewModal({
       .split(/\s+/)
       .map((t) => t.trim().toLowerCase());
 
-    // Check matches
+    const NUMBER_SYNONYMS: Record<string, string[]> = {
+      "0": ["0", "zero", "none"],
+      "1": ["1", "one", "first", "single"],
+      "2": ["2", "two", "to", "too", "twice", "couple", "second"],
+      "3": ["3", "three", "third"],
+      "4": ["4", "four", "for", "fourth"],
+      "5": ["5", "five", "fifth"],
+      "6": ["6", "six", "sixth"],
+      "7": ["7", "seven", "seventh"],
+      "8": ["8", "eight", "ate", "eighth"],
+      "9": ["9", "nine", "ninth"],
+      "10": ["10", "ten", "tenth"],
+    };
+
+    // Check matches against expected tokens
     let matchedCount = 0;
     round.expectedTokens.forEach((token) => {
-      const target = token.toLowerCase();
-      if (
+      const target = token.toLowerCase().trim();
+      const targetSynonyms = NUMBER_SYNONYMS[target] || [
+        target,
+        `${target}s`,
+        `${target}es`,
+      ];
+
+      const hasMatch =
         cleanTokens.some(
           (t) =>
-            t === target ||
-            t === `${target}s` ||
+            targetSynonyms.includes(t) ||
             (target.length > 3 && t.includes(target))
-        )
-      ) {
+        ) ||
+        targetSynonyms.some((syn) => childSpoken.includes(syn)) ||
+        childSpoken.includes(target);
+
+      if (hasMatch) {
         matchedCount += 1;
       }
     });
 
-    const isCorrect = matchedCount >= Math.ceil(round.expectedTokens.length * 0.6);
-    const roundAccuracy = Math.round((matchedCount / round.expectedTokens.length) * 100);
+    const isCorrect = matchedCount >= Math.ceil(round.expectedTokens.length * 0.5);
+    const roundAccuracy = Math.min(100, Math.round((matchedCount / round.expectedTokens.length) * 100));
 
     const resultRecord = {
       round: currentRoundIndex + 1,
@@ -1367,33 +1411,38 @@ export default function VoiceInterviewModal({
               </span>
             </div>
 
-            {/* Live Captured Answer Box — show unique words only */}
+            {/* Live Captured Answer Box */}
             <div
               style={{
                 background: "#FFFFFF",
-                border: "1.5px dashed #C4B5FD",
+                border: isListening ? "2px solid #8B5CF6" : "1.5px dashed #C4B5FD",
                 borderRadius: "16px",
-                padding: "12px 16px",
-                minHeight: "56px",
+                padding: "14px 18px",
+                minHeight: "60px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: "12px",
+                boxShadow: isListening ? "0 0 16px rgba(139, 92, 246, 0.15)" : "none",
+                transition: "all 0.2s ease",
               }}
             >
               {spokenTranscript || typedAnswer ? (
-                <span style={{ fontSize: "16px", fontWeight: 800, color: "#4C1D95" }}>
-                  &ldquo;{Array.from(new Set(
-                    [spokenTranscript, typedAnswer]
-                      .filter(Boolean)
-                      .join(" ")
-                      .split(/\s+/)
-                  )).join(" ")}&rdquo;
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
+                  <span style={{ fontSize: "17px", fontWeight: 800, color: "#4C1D95", letterSpacing: "0.2px" }}>
+                    &ldquo;{[spokenTranscript, typedAnswer].filter(Boolean).join(" ").trim()}&rdquo;
+                  </span>
+                  {isListening && (
+                    <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "#10B981", animation: "pulse 1s infinite" }} />
+                  )}
+                </div>
               ) : (
-                <span style={{ fontSize: "13px", color: "#9A94A9" }}>
-                  Speak aloud or use the quick chips / keyboard below...
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#8B5CF6" }}>
+                  {isListening && <Mic className="h-4 w-4 animate-bounce text-purple-600" />}
+                  <span style={{ fontSize: "13.5px", fontWeight: 600, color: isListening ? "#6D28D9" : "#9A94A9" }}>
+                    {isListening ? "Listening... Speak your answer aloud now" : "Speak aloud or use the quick chips below..."}
+                  </span>
+                </div>
               )}
             </div>
 
