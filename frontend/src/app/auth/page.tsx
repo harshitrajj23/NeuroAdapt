@@ -164,6 +164,24 @@ function AuthContent() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingLong, setLoadingLong] = useState(false);
+
+  // Automatically pre-warm backend on page load so it's awake by the time user fills the form
+  useEffect(() => {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    fetch(`${backendUrl}/api/health`, { cache: "no-store" }).catch(() => {});
+  }, []);
+
+  // Show cold-start wake-up hint if request takes > 3.5s
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isLoading) {
+      timer = setTimeout(() => setLoadingLong(true), 3500);
+    } else {
+      setLoadingLong(false);
+    }
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   const selectRole = (selectedRole: Role) => {
     setRole(selectedRole);
@@ -534,6 +552,25 @@ function AuthContent() {
                 </>
               )}
             </button>
+
+            {loadingLong && (
+              <div
+                style={{
+                  marginTop: "12px",
+                  padding: "10px 14px",
+                  background: "#F5F3FF",
+                  borderRadius: "10px",
+                  border: "1px solid #DDD6FE",
+                  color: "#6D28D9",
+                  fontSize: "12.5px",
+                  textAlign: "center",
+                  fontWeight: 600,
+                  animation: "pulse 2s infinite",
+                }}
+              >
+                ⚡ Waking up free-tier cloud server (takes a moment on first visit)...
+              </div>
+            )}
           </form>
 
 
